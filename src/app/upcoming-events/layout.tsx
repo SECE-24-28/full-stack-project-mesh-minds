@@ -5,7 +5,7 @@ export default function UpcomingEventsLayout({ children }: { children: React.Rea
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-      <div className="ml-64 flex-1">
+      <div className="ml-[280px] flex-1 min-w-0">
         <RoleBackground>{children}</RoleBackground>
       </div>
     </div>

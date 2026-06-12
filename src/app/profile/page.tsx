@@ -7,7 +7,7 @@ import { useSession } from '@/lib/auth-client';
 import { UserRecord } from '@/types';
 import {
   Mail, Building, Calendar, BookOpen, Award, Edit3,
-  User, Shield, GraduationCap, Clock,
+  User, Shield, GraduationCap, Hash, FileText, Ticket, Star,
 } from 'lucide-react';
 
 export default function ProfilePage() {
@@ -18,30 +18,19 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (sessionLoading) return;
-
-    if (!session) {
-      router.push('/login');
-      return;
-    }
-
+    if (!session) { router.push('/login'); return; }
     fetch('/api/profile')
       .then((r) => r.json())
-      .then((data) => {
-        setUser(data.user);
-        setLoading(false);
-      })
-      .catch(() => {
-        toast.error('Failed to load profile');
-        setLoading(false);
-      });
+      .then((d) => { setUser(d.user); setLoading(false); })
+      .catch(() => { toast.error('Failed to load profile'); setLoading(false); });
   }, [session, sessionLoading, router]);
 
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center p-8">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-          <p className="text-sm text-slate-500">Loading profile...</p>
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-t-transparent" style={{ borderColor: 'var(--role-primary)', borderTopColor: 'transparent' }} />
+          <p className="text-sm text-[#94A3B8]">Loading profile...</p>
         </div>
       </div>
     );
@@ -50,29 +39,28 @@ export default function ProfilePage() {
   if (!user) {
     return (
       <div className="flex h-full items-center justify-center p-8">
-        <p className="text-slate-500">Profile not found</p>
+        <p className="text-[#94A3B8]">Profile not found</p>
       </div>
     );
   }
 
   const roleIcons: Record<string, React.ElementType> = {
     STUDENT: GraduationCap,
-    FACULTY: User,
+    FACULTY: BookOpen,
     ADMIN: Shield,
   };
-
   const RoleIcon = roleIcons[user.role] || User;
 
   return (
-    <div className="animate-fade-in p-8">
-      <div className="mb-8 flex items-center justify-between">
+    <div className="page-content animate-fade-up">
+      <div className="page-header flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">My Profile</h1>
-          <p className="mt-1 text-sm text-slate-500">View and manage your account information.</p>
+          <h1 className="page-title">My Profile</h1>
+          <p className="page-subtitle">Manage your account information</p>
         </div>
         <button
           onClick={() => router.push('/profile/edit')}
-          className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/10"
+          className="btn-secondary"
         >
           <Edit3 className="h-4 w-4" />
           Edit Profile
@@ -80,60 +68,113 @@ export default function ProfilePage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-        <div className="role-card rounded-2xl p-6">
-          <div className="flex flex-col items-center text-center">
-            <div className="mb-4 flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500">
-              {user.profileImage ? (
-                <img
-                  src={user.profileImage}
-                  alt={user.name}
-                  className="h-full w-full rounded-2xl object-cover"
-                />
-              ) : (
-                <RoleIcon className="h-12 w-12 text-white" />
-              )}
-            </div>
-            <h2 className="text-xl font-semibold text-white">{user.name}</h2>
-            <p className="text-sm text-slate-500">{user.email}</p>
-            <span className="mt-2 rounded-full bg-blue-500/20 px-3 py-1 text-xs font-medium text-blue-400">
-              {user.role}
-            </span>
+        {/* Profile Card */}
+        <div className="saas-card p-6 flex flex-col items-center text-center">
+          <div
+            className="h-24 w-24 rounded-2xl flex items-center justify-center mb-4 overflow-hidden"
+            style={{ background: 'var(--role-soft)' }}
+          >
+            {user.profileImage ? (
+              <img src={user.profileImage} alt={user.name} className="h-full w-full object-cover" />
+            ) : (
+              <RoleIcon className="h-12 w-12" style={{ color: 'var(--role-accent)' }} />
+            )}
           </div>
 
-          <div className="mt-6 space-y-3 border-t border-white/5 pt-4">
-            <div className="flex items-center gap-3">
-              <Award className="h-4 w-4 text-amber-400" />
-              <span className="text-sm text-slate-400">Points</span>
-              <span className="ml-auto font-semibold text-white">{user.points ?? 0}</span>
+          <h2 className="text-xl font-bold text-[#0F172A]">{user.name}</h2>
+          <p className="text-sm text-[#64748B] mt-0.5">{user.email}</p>
+
+          <span className="role-tag mt-3">
+            <RoleIcon className="h-3 w-3" />
+            {user.role}
+          </span>
+
+          {/* Points */}
+          <div className="mt-6 w-full rounded-2xl p-4 border border-[#E9ECF5]" style={{ background: 'var(--role-soft)' }}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Award className="h-4 w-4" style={{ color: 'var(--role-accent)' }} />
+                <span className="text-sm font-medium text-[#475569]">Campus Points</span>
+              </div>
+              <span className="text-2xl font-bold" style={{ color: 'var(--role-accent)' }}>{user.points ?? 0}</span>
             </div>
           </div>
+
+          {/* Quick stats for student */}
+          {user.role === 'STUDENT' && (
+            <div className="mt-4 w-full grid grid-cols-2 gap-3">
+              {[
+                { label: 'Events Created', value: user.createdEventsCount ?? 0, icon: FileText },
+                { label: 'Registered',     value: user.registeredEventsCount ?? 0, icon: Ticket },
+              ].map(({ label, value, icon: Icon }) => (
+                <div key={label} className="rounded-2xl border border-[#E9ECF5] p-3 text-center">
+                  <Icon className="h-4 w-4 mx-auto mb-1" style={{ color: 'var(--role-accent)' }} />
+                  <p className="text-xl font-bold text-[#0F172A]">{value}</p>
+                  <p className="text-xs text-[#94A3B8] leading-tight">{label}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {user.role === 'FACULTY' && (
+            <div className="mt-4 w-full rounded-2xl border border-[#E9ECF5] p-3 text-center">
+              <Star className="h-4 w-4 mx-auto mb-1" style={{ color: 'var(--role-accent)' }} />
+              <p className="text-xl font-bold text-[#0F172A]">{user.mentoredEventsCount ?? 0}</p>
+              <p className="text-xs text-[#94A3B8]">Events Mentored</p>
+            </div>
+          )}
         </div>
 
-        <div className="role-card rounded-2xl p-6">
-          <h3 className="mb-4 text-lg font-semibold text-white">Account Details</h3>
-          <div className="grid gap-4 sm:grid-cols-2">
+        {/* Details Card */}
+        <div className="saas-card p-6">
+          <div className="mb-6">
+            <p className="section-title">Account Details</p>
+            <p className="section-subtitle">Your personal and academic information</p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <DetailItem icon={Mail}     label="Email"      value={user.email} />
+
             {user.role === 'STUDENT' && (
               <>
-                <DetailItem icon={GraduationCap} label="Roll Number" value={user.rollNumber} />
-                <DetailItem icon={Calendar} label="Year" value={user.year ? `${user.year} Year` : undefined} />
-                <DetailItem icon={Building} label="Department" value={user.department} />
-                <DetailItem icon={BookOpen} label="Section" value={user.section} />
-                <StatBox label="Events Created" value={user.createdEventsCount ?? 0} />
-                <StatBox label="Events Registered" value={user.registeredEventsCount ?? 0} />
+                <DetailItem icon={Hash}          label="Roll Number"  value={user.rollNumber} />
+                <DetailItem icon={Calendar}      label="Year"         value={user.year ? `Year ${user.year}` : undefined} />
+                <DetailItem icon={Building}      label="Department"   value={user.department} />
+                <DetailItem icon={BookOpen}      label="Section"      value={user.section} />
               </>
             )}
 
             {user.role === 'FACULTY' && (
               <>
-                <DetailItem icon={Shield} label="Employee ID" value={user.employeeId} />
-                <DetailItem icon={Building} label="Department" value={user.department} />
-                <StatBox label="Events Mentored" value={user.mentoredEventsCount ?? 0} />
+                <DetailItem icon={Hash}     label="Employee ID"  value={user.employeeId} />
+                <DetailItem icon={Building} label="Department"   value={user.department} />
               </>
             )}
 
             {user.role === 'ADMIN' && (
               <DetailItem icon={Building} label="Department" value={user.department} />
             )}
+          </div>
+
+          {/* Activity section */}
+          <div className="mt-8 pt-6 border-t border-[#E9ECF5]">
+            <p className="section-title mb-4">Account Status</p>
+            <div className="flex items-center gap-3 rounded-2xl border border-[#E9ECF5] p-4">
+              <div className="h-10 w-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--role-soft)' }}>
+                <User className="h-5 w-5" style={{ color: 'var(--role-accent)' }} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-[#1E293B]">
+                  {user.emailVerified ? 'Verified Account' : 'Pending Verification'}
+                </p>
+                <p className="text-xs text-[#94A3B8]">
+                  {user.emailVerified ? 'Your email address is verified' : 'Please verify your email'}
+                </p>
+              </div>
+              <span className={`ml-auto badge ${user.emailVerified ? 'badge-accepted' : 'badge-pending'}`}>
+                {user.emailVerified ? 'Verified' : 'Pending'}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -143,21 +184,14 @@ export default function ProfilePage() {
 
 function DetailItem({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value?: string | number | null }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/3 px-4 py-3">
-      <Icon className="h-4 w-4 text-slate-500" />
-      <div>
-        <p className="text-xs text-slate-500">{label}</p>
-        <p className="text-sm font-medium text-slate-200">{value ?? '—'}</p>
+    <div className="flex items-center gap-3 rounded-2xl border border-[#E9ECF5] px-4 py-3 hover:bg-[#F8F9FC] transition-all">
+      <div className="h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'var(--role-soft)' }}>
+        <Icon className="h-4 w-4" style={{ color: 'var(--role-accent)' }} />
       </div>
-    </div>
-  );
-}
-
-function StatBox({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-xl border border-white/5 bg-white/3 px-4 py-3 text-center">
-      <p className="text-2xl font-bold text-white">{value}</p>
-      <p className="text-xs text-slate-500">{label}</p>
+      <div className="min-w-0">
+        <p className="text-xs text-[#94A3B8]">{label}</p>
+        <p className="text-sm font-semibold text-[#1E293B] truncate">{value ?? '—'}</p>
+      </div>
     </div>
   );
 }

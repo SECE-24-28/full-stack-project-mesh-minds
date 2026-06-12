@@ -1,55 +1,71 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import Image from 'next/image';
 import {
   FileText, ThumbsUp, Ticket, Users, Clock, CheckCircle,
-  DollarSign, TrendingUp, Star, Activity, ArrowUpRight, Zap,
-  Calendar, XCircle,
+  Star, Calendar, XCircle, TrendingUp, ArrowUpRight,
+  Activity, Zap, BarChart2,
 } from 'lucide-react';
 
 function StatCard({
-  title, value, icon: Icon, gradient, subtitle,
+  title, value, icon: Icon, color, subtitle, trend,
 }: {
   title: string;
   value: string | number;
   icon: React.ElementType;
-  gradient: string;
+  color: string;
   subtitle?: string;
+  trend?: string;
 }) {
   return (
-    <div className="role-stat-card group relative overflow-hidden rounded-2xl p-5 transition-all duration-300 hover:-translate-y-0.5">
-      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 transition-opacity duration-300 group-hover:opacity-8`} />
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-slate-500">{title}</p>
-          <p className="mt-2 text-3xl font-bold text-white">{value}</p>
-          {subtitle && <p className="mt-1 text-xs text-slate-500">{subtitle}</p>}
+    <div className="stat-card">
+      <div className="flex items-start justify-between mb-4">
+        <div
+          className="stat-icon-circle"
+          style={{ background: `${color}18` }}
+        >
+          <Icon className="h-5 w-5" style={{ color }} />
         </div>
-        <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${gradient} shadow-lg`}>
-          <Icon className="h-5 w-5 text-white" />
-        </div>
+        {trend && (
+          <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+            <ArrowUpRight className="h-3 w-3" />
+            {trend}
+          </span>
+        )}
       </div>
+      <p className="text-3xl font-bold text-[#0F172A] leading-none">{value}</p>
+      <p className="text-sm font-medium text-[#64748B] mt-1.5">{title}</p>
+      {subtitle && <p className="text-xs text-[#94A3B8] mt-0.5">{subtitle}</p>}
     </div>
   );
 }
 
-function SectionHeader({ title, subtitle }: { title: string; subtitle: string }) {
+function SectionCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <div className="mb-5">
-      <h2 className="text-base font-semibold text-white">{title}</h2>
-      <p className="text-sm text-slate-500">{subtitle}</p>
-    </div>
-  );
-}
-
-function RowCard({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="role-card flex items-center justify-between rounded-xl px-4 py-3 transition-all duration-200">
+    <div className="saas-card p-6">
+      <div className="mb-5">
+        <p className="section-title">{title}</p>
+        {subtitle && <p className="section-subtitle">{subtitle}</p>}
+      </div>
       {children}
     </div>
   );
 }
+
+const statusBadge: Record<string, string> = {
+  PENDING_FACULTY_APPROVAL: 'badge badge-pending',
+  PENDING_ADMIN_APPROVAL: 'badge badge-review',
+  ACCEPTED: 'badge badge-accepted',
+  REJECTED: 'badge badge-rejected',
+  COMPLETED: 'badge badge-completed',
+};
+const statusLabel: Record<string, string> = {
+  PENDING_FACULTY_APPROVAL: 'Faculty Review',
+  PENDING_ADMIN_APPROVAL: 'Admin Review',
+  ACCEPTED: 'Accepted',
+  REJECTED: 'Rejected',
+  COMPLETED: 'Completed',
+};
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -57,14 +73,9 @@ export default async function DashboardPage() {
 
   const { role, id: userId, name } = session.user;
 
-// ── Student ──────────────────────────────────────────────────────
+  // ── STUDENT ──────────────────────────────────────────────────────
   if (role === 'STUDENT') {
-    const {
-      rollNumber,
-      year,
-      section,
-      department,
-    } = session.user;
+    const { rollNumber, year, section, department } = session.user;
 
     const [proposalCount, voteCount, bookingCount, recentProposals, upcomingEvents] = await Promise.all([
       prisma.eventProposal.count({ where: { authorId: userId } }),
@@ -73,137 +84,120 @@ export default async function DashboardPage() {
       prisma.eventProposal.findMany({
         where: { authorId: userId },
         orderBy: { createdAt: 'desc' },
-        take: 4,
-        select: { id: true, title: true, status: true, _count: { select: { votes: true } } },
+        take: 5,
+        select: { id: true, title: true, status: true, category: true, _count: { select: { votes: true } } },
       }),
       prisma.eventProposal.findMany({
-        where: {
-          authorId: { not: userId },
-          status: 'ACCEPTED',
-          startDate: { gt: new Date() },
-        },
+        where: { status: 'ACCEPTED', startDate: { gt: new Date() } },
         orderBy: { startDate: 'asc' },
-        take: 4,
+        take: 5,
         include: { author: { select: { name: true } }, _count: { select: { registrations: true } } },
       }),
     ]);
 
-    const statusColors: Record<string, string> = {
-      PENDING_FACULTY_APPROVAL: 'bg-slate-500/20 text-slate-400',
-      PENDING_ADMIN_APPROVAL: 'bg-blue-500/20 text-blue-400',
-      ACCEPTED: 'bg-emerald-500/20 text-emerald-400',
-      REJECTED: 'bg-red-500/20 text-red-400',
-      COMPLETED: 'bg-slate-400/20 text-slate-300',
-    };
-
     const yearLabels = ['I', 'II', 'III', 'IV'];
-    const yearDisplay = year ? yearLabels[year - 1] + ' Year' : '';
+    const yearDisplay = year ? yearLabels[year - 1] + ' Year' : '—';
 
     return (
-      <div className="animate-fade-in p-8">
+      <div className="page-content animate-fade-up" data-role="STUDENT">
         {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
+        <div className="page-header flex items-start justify-between">
           <div>
-            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-blue-400">
-              <Zap className="h-3.5 w-3.5" />
-              Student Portal
+            <div className="flex items-center gap-2 mb-2">
+              <span className="role-tag">
+                <Zap className="h-3 w-3" />
+                Student Portal
+              </span>
             </div>
-            <h1 className="mt-1 text-2xl font-bold text-white">
-              Welcome, {name} {'\u2019'}
-            </h1>
-            <div className="mt-1 space-x-4 text-sm text-slate-400">
-              <span>Roll No: {rollNumber}</span>
-              <span>Department: {department}</span>
-              <span>Year: {yearDisplay}</span>
-              <span>Section: {section}</span>
-            </div>
-            <p className="mt-1 text-sm text-slate-400">Here&apos;s what&apos;s happening with your events today.</p>
+            <h1 className="page-title">Welcome back, {name} 👋</h1>
+            <p className="page-subtitle mt-1">
+              {department} · {yearDisplay} · Section {section || '—'} · Roll {rollNumber || '—'}
+            </p>
           </div>
-          <div className="hidden items-center gap-2 rounded-xl border border-blue-500/20 bg-blue-500/10 px-4 py-2 md:flex">
-            <div className="h-2 w-2 animate-pulse rounded-full bg-blue-400" />
-            <span className="text-xs font-medium text-blue-300">Active member</span>
+          <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full border border-[#E9ECF5] bg-white text-sm text-[#64748B]">
+            <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            Active Member
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <StatCard title="Proposals Submitted" value={proposalCount} icon={FileText} gradient="from-blue-500 to-cyan-500" subtitle="All time" />
-          <StatCard title="Votes Cast" value={voteCount} icon={ThumbsUp} gradient="from-cyan-500 to-blue-600" subtitle="Community support given" />
-          <StatCard title="Tickets Booked" value={bookingCount} icon={Ticket} gradient="from-blue-600 to-indigo-600" subtitle="Confirmed bookings" />
+        {/* Stat Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-7">
+          <StatCard title="Proposals Submitted" value={proposalCount} icon={FileText} color="#6BB6FF" subtitle="All time" trend="+2" />
+          <StatCard title="Votes Cast"           value={voteCount}    icon={ThumbsUp}  color="#7EDC92" subtitle="Community support" />
+          <StatCard title="Tickets Booked"       value={bookingCount} icon={Ticket}    color="#9FA1FF" subtitle="Confirmed bookings" />
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-2">
-          <div className="role-card rounded-2xl p-6 transition-all duration-200">
-            <SectionHeader title="Upcoming Events" subtitle="Accepted events proposed by others" />
+        {/* Two Column */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <SectionCard title="Upcoming Events" subtitle="Accepted events you can register for">
             {upcomingEvents.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-500/10">
-                  <Calendar className="h-6 w-6 text-cyan-400" />
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="h-12 w-12 rounded-2xl bg-[#EEF4FF] flex items-center justify-center mb-3">
+                  <Calendar className="h-6 w-6 text-[#6BB6FF]" />
                 </div>
-                <p className="font-medium text-slate-300">No upcoming events</p>
-                <p className="mt-1 text-sm text-slate-500">Accepted campus events will appear here.</p>
+                <p className="font-medium text-[#1E293B]">No upcoming events</p>
+                <p className="text-sm text-[#94A3B8] mt-1">Accepted events will appear here</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {upcomingEvents.map((event) => (
-                  <RowCard key={event.id}>
+                  <div key={event.id} className="flex items-center justify-between px-4 py-3 rounded-xl border border-[#F1F5F9] hover:border-[#E9ECF5] hover:bg-[#FAFBFF] transition-all">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10">
-                        <Calendar className="h-4 w-4 text-cyan-400" />
+                      <div className="h-9 w-9 rounded-xl bg-[#EEF4FF] flex items-center justify-center flex-shrink-0">
+                        <Calendar className="h-4 w-4 text-[#6BB6FF]" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-slate-200">{event.title}</p>
-                        <p className="text-xs text-slate-500">
-                          by {event.author.name} · {new Date(event.startDate).toLocaleDateString()}
+                        <p className="text-sm font-semibold text-[#1E293B] leading-none">{event.title}</p>
+                        <p className="text-xs text-[#94A3B8] mt-0.5">
+                          {event.author.name} · {new Date(event.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </p>
                       </div>
                     </div>
-                    <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-medium text-emerald-400">
+                    <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full whitespace-nowrap">
                       {event._count.registrations} registered
                     </span>
-                  </RowCard>
+                  </div>
                 ))}
               </div>
             )}
-          </div>
+          </SectionCard>
 
-          <div className="role-card rounded-2xl p-6 transition-all duration-200">
-            <SectionHeader title="My Proposals" subtitle="Recent event proposals you've submitted" />
+          <SectionCard title="My Proposals" subtitle="Track your event proposal status">
             {recentProposals.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/10">
-                  <FileText className="h-6 w-6 text-blue-400" />
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="h-12 w-12 rounded-2xl bg-[#EEF4FF] flex items-center justify-center mb-3">
+                  <FileText className="h-6 w-6 text-[#6BB6FF]" />
                 </div>
-                <p className="font-medium text-slate-300">No proposals yet</p>
-                <p className="mt-1 text-sm text-slate-500">Head to Proposals to create your first event idea.</p>
+                <p className="font-medium text-[#1E293B]">No proposals yet</p>
+                <p className="text-sm text-[#94A3B8] mt-1">Create your first event proposal</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {recentProposals.map((p) => (
-                  <RowCard key={p.id}>
+                  <div key={p.id} className="flex items-center justify-between px-4 py-3 rounded-xl border border-[#F1F5F9] hover:border-[#E9ECF5] hover:bg-[#FAFBFF] transition-all">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10">
-                        <FileText className="h-4 w-4 text-blue-400" />
+                      <div className="h-9 w-9 rounded-xl bg-[#EEF4FF] flex items-center justify-center flex-shrink-0">
+                        <FileText className="h-4 w-4 text-[#6BB6FF]" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-slate-200">{p.title}</p>
-                        <p className="text-xs text-slate-500">{p._count.votes} votes</p>
+                        <p className="text-sm font-semibold text-[#1E293B] leading-none">{p.title}</p>
+                        <p className="text-xs text-[#94A3B8] mt-0.5">{p._count.votes} votes · {p.category}</p>
                       </div>
                     </div>
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[p.status] ?? 'bg-slate-500/20 text-slate-400'}`}>
-                      {p.status.replaceAll('_', ' ')}
+                    <span className={statusBadge[p.status] ?? 'badge badge-pending'}>
+                      {statusLabel[p.status] ?? p.status}
                     </span>
-                  </RowCard>
+                  </div>
                 ))}
               </div>
             )}
-          </div>
+          </SectionCard>
         </div>
       </div>
     );
   }
 
-// ── Faculty ───────────────────────────────────────────────────────
+  // ── FACULTY ───────────────────────────────────────────────────────
   if (role === 'FACULTY') {
     const { employeeId, department } = session.user;
 
@@ -214,79 +208,72 @@ export default async function DashboardPage() {
       prisma.eventProposal.findMany({
         where: { mentorFacultyId: userId, status: 'PENDING_FACULTY_APPROVAL' },
         orderBy: { createdAt: 'desc' },
-        take: 4,
+        take: 5,
         include: { author: { select: { name: true } }, _count: { select: { votes: true } } },
       }),
     ]);
 
     return (
-      <div className="animate-fade-in p-8">
-        <div className="mb-8 flex items-center justify-between">
+      <div className="page-content animate-fade-up" data-role="FACULTY">
+        <div className="page-header flex items-start justify-between">
           <div>
-            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-emerald-400">
-              <Activity className="h-3.5 w-3.5" />
-              Faculty Portal
+            <div className="flex items-center gap-2 mb-2">
+              <span className="role-tag">
+                <Activity className="h-3 w-3" />
+                Faculty Portal
+              </span>
             </div>
-            <h1 className="mt-1 text-2xl font-bold text-white">
-              Welcome, {name}
-            </h1>
-            <div className="mt-1 space-x-4 text-sm text-slate-400">
-              <span>Employee ID: {employeeId}</span>
-              <span>Department: {department}</span>
-            </div>
-            <p className="mt-1 text-sm text-slate-400">Review and manage student event proposals.</p>
+            <h1 className="page-title">Welcome back, {name} 👋</h1>
+            <p className="page-subtitle">{department} · Employee ID: {employeeId || '—'}</p>
           </div>
           {pending > 0 && (
-            <div className="flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2">
-              <Clock className="h-4 w-4 text-amber-400" />
-              <span className="text-xs font-medium text-amber-300">{pending} awaiting review</span>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-50 border border-amber-200 text-sm text-amber-700">
+              <Clock className="h-4 w-4" />
+              {pending} awaiting review
             </div>
           )}
         </div>
 
-        <div className="mb-8 grid gap-4 sm:grid-cols-3">
-          <StatCard title="Pending Review" value={pending} icon={Clock} gradient="from-amber-500 to-orange-500" subtitle="Need your attention" />
-          <StatCard title="Approved Events" value={approved} icon={CheckCircle} gradient="from-emerald-500 to-teal-500" subtitle="Active & published" />
-          <StatCard title="Completed Events" value={completed} icon={Star} gradient="from-teal-500 to-cyan-500" subtitle="Successfully held" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-7">
+          <StatCard title="Pending Review"   value={pending}   icon={Clock}        color="#F59E0B" subtitle="Need attention" />
+          <StatCard title="Approved Events"  value={approved}  icon={CheckCircle}  color="#7EDC92" subtitle="Active & published" />
+          <StatCard title="Completed Events" value={completed} icon={Star}         color="#9FA1FF" subtitle="Successfully held" />
         </div>
 
-        <div className="role-card rounded-2xl p-6 transition-all duration-200">
-          <SectionHeader title="Pending Reviews" subtitle="Proposals awaiting your faculty review" />
+        <SectionCard title="Pending Reviews" subtitle="Proposals assigned to you for review">
           {recentPending.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10">
-                <CheckCircle className="h-6 w-6 text-emerald-400" />
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <div className="h-12 w-12 rounded-2xl bg-[#EAFBEE] flex items-center justify-center mb-3">
+                <CheckCircle className="h-6 w-6 text-[#7EDC92]" />
               </div>
-              <p className="font-medium text-slate-300">All caught up!</p>
-              <p className="mt-1 text-sm text-slate-500">No proposals pending review right now.</p>
+              <p className="font-medium text-[#1E293B]">All caught up!</p>
+              <p className="text-sm text-[#94A3B8] mt-1">No proposals pending your review</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {recentPending.map((p) => (
-                <RowCard key={p.id}>
+                <div key={p.id} className="flex items-center justify-between px-4 py-3 rounded-xl border border-[#F1F5F9] hover:border-[#E9ECF5] hover:bg-[#F8FFF9] transition-all">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10">
-                      <FileText className="h-4 w-4 text-emerald-400" />
+                    <div className="h-9 w-9 rounded-xl bg-[#EAFBEE] flex items-center justify-center flex-shrink-0">
+                      <FileText className="h-4 w-4 text-[#7EDC92]" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-slate-200">{p.title}</p>
-                      <p className="text-xs text-slate-500">by {p.author.name} · {p._count.votes} votes</p>
+                      <p className="text-sm font-semibold text-[#1E293B] leading-none">{p.title}</p>
+                      <p className="text-xs text-[#94A3B8] mt-0.5">by {p.author.name} · {p._count.votes} votes</p>
                     </div>
                   </div>
-                  <span className="rounded-full bg-amber-500/20 px-2.5 py-0.5 text-xs font-medium text-amber-400">
-                    Under Review
-                  </span>
-                </RowCard>
+                  <span className="badge badge-pending">Under Review</span>
+                </div>
               ))}
             </div>
           )}
-        </div>
+        </SectionCard>
       </div>
     );
   }
 
-// ── Admin ─────────────────────────────────────────────────────────
-  const [userCount, studentCount, facultyCount, eventCount, pendingCount, acceptedCount, rejectedCount, completedCount, acceptedUsers] = await Promise.all([
+  // ── ADMIN ─────────────────────────────────────────────────────────
+  const [userCount, studentCount, facultyCount, eventCount, pendingCount, acceptedCount, rejectedCount, completedCount, recentUsers] = await Promise.all([
     prisma.user.count(),
     prisma.user.count({ where: { role: 'STUDENT' } }),
     prisma.user.count({ where: { role: 'FACULTY' } }),
@@ -296,79 +283,92 @@ export default async function DashboardPage() {
     prisma.eventProposal.count({ where: { status: 'REJECTED' } }),
     prisma.eventProposal.count({ where: { status: 'COMPLETED' } }),
     prisma.user.findMany({
-      where: { emailVerified: true },
       orderBy: { createdAt: 'desc' },
-      take: 5,
+      take: 6,
       select: { id: true, name: true, email: true, role: true, createdAt: true },
     }),
   ]);
 
-  const roleColors: Record<string, string> = {
-    STUDENT: 'bg-blue-500/20 text-blue-400',
-    FACULTY: 'bg-emerald-500/20 text-emerald-400',
-    ADMIN: 'bg-violet-500/20 text-violet-400',
+  const roleBadge: Record<string, string> = {
+    STUDENT: 'badge badge-review',
+    FACULTY: 'badge badge-accepted',
+    ADMIN: 'badge badge-completed',
   };
 
   return (
-    <div className="animate-fade-in p-8">
-      <div className="mb-8 flex items-center justify-between">
+    <div className="page-content animate-fade-up" data-role="ADMIN">
+      <div className="page-header flex items-start justify-between">
         <div>
-          <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-violet-400">
-            <ShieldIcon className="h-3.5 w-3.5" />
-            Admin Control Center
+          <div className="flex items-center gap-2 mb-2">
+            <span className="role-tag">
+              <BarChart2 className="h-3 w-3" />
+              Admin Control Center
+            </span>
           </div>
-          <h1 className="mt-1 text-2xl font-bold text-white">System Overview</h1>
-          <p className="mt-1 text-sm text-slate-400">Monitor platform activity, users, and performance.</p>
+          <h1 className="page-title">System Overview</h1>
+          <p className="page-subtitle">Monitor platform activity, users, and events</p>
         </div>
-        <div className="flex items-center gap-2 rounded-xl border border-violet-500/20 bg-violet-500/10 px-4 py-2">
-          <div className="h-2 w-2 animate-pulse rounded-full bg-violet-400" />
-          <span className="text-xs font-medium text-violet-300">System operational</span>
+        <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full border border-[#E9ECF5] bg-white text-sm text-[#64748B]">
+          <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+          System Operational
         </div>
       </div>
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Total Users" value={userCount} icon={Users} gradient="from-violet-500 to-indigo-500" subtitle="Registered accounts" />
-        <StatCard title="Students" value={studentCount} icon={Users} gradient="from-blue-500 to-cyan-500" subtitle="Active students" />
-        <StatCard title="Faculty" value={facultyCount} icon={Users} gradient="from-emerald-500 to-teal-500" subtitle="Active faculty" />
-        <StatCard title="Total Events" value={eventCount} icon={FileText} gradient="from-amber-500 to-orange-500" subtitle="All proposals" />
+      {/* User stats */}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-5 mb-5">
+        <StatCard title="Total Users"   value={userCount}    icon={Users}  color="#9FA1FF" subtitle="Registered accounts" trend="+12%" />
+        <StatCard title="Students"      value={studentCount} icon={Users}  color="#6BB6FF" subtitle="Active students" />
+        <StatCard title="Faculty"       value={facultyCount} icon={Users}  color="#7EDC92" subtitle="Active faculty" />
+        <StatCard title="Total Events"  value={eventCount}   icon={FileText} color="#F59E0B" subtitle="All proposals" />
       </div>
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-4">
-        <StatCard title="Pending Events" value={pendingCount} icon={Clock} gradient="from-amber-500 to-orange-500" />
-        <StatCard title="Accepted Events" value={acceptedCount} icon={CheckCircle} gradient="from-emerald-500 to-teal-500" />
-        <StatCard title="Rejected Events" value={rejectedCount} icon={XCircle} gradient="from-red-500 to-rose-500" />
-        <StatCard title="Completed Events" value={completedCount} icon={Calendar} gradient="from-cyan-500 to-blue-500" />
+      {/* Event stats */}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-5 mb-7">
+        <StatCard title="Pending"   value={pendingCount}   icon={Clock}        color="#F59E0B" />
+        <StatCard title="Accepted"  value={acceptedCount}  icon={CheckCircle}  color="#7EDC92" />
+        <StatCard title="Rejected"  value={rejectedCount}  icon={XCircle}      color="#F87171" />
+        <StatCard title="Completed" value={completedCount} icon={Star}         color="#9FA1FF" />
       </div>
 
-      <div className="role-card rounded-2xl p-6 transition-all duration-200">
-        <SectionHeader title="Accepted Users" subtitle="Users with verified accounts" />
-        <div className="space-y-3">
-          {acceptedUsers.map((u) => (
-            <RowCard key={u.id}>
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 text-xs font-bold text-white">
-                  {u.name.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-200">{u.name}</p>
-                  <p className="text-xs text-slate-500">{u.email}</p>
-                </div>
-              </div>
-              <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${roleColors[u.role] ?? ''}`}>
-                {u.role}
-              </span>
-            </RowCard>
-          ))}
+      {/* Users table */}
+      <div className="saas-table-wrap">
+        <div className="px-6 py-5 border-b border-[#E9ECF5]">
+          <p className="section-title">Recent Users</p>
+          <p className="section-subtitle">Latest registered accounts on the platform</p>
         </div>
+        <table className="saas-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Joined</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentUsers.map((u) => (
+              <tr key={u.id}>
+                <td>
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                      style={{ background: 'var(--role-accent)' }}
+                    >
+                      {u.name.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="font-medium text-[#1E293B]">{u.name}</span>
+                  </div>
+                </td>
+                <td className="text-[#64748B]">{u.email}</td>
+                <td><span className={roleBadge[u.role] ?? 'badge badge-completed'}>{u.role}</span></td>
+                <td className="text-[#94A3B8]">
+                  {new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
-  );
-}
-
-function ShieldIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    </svg>
   );
 }

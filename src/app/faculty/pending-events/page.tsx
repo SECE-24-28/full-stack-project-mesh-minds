@@ -108,10 +108,7 @@ export default function FacultyPendingEventsPage() {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center p-8">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
-          <p className="text-sm text-slate-500">Loading...</p>
-        </div>
+        <Loader2 className="h-7 w-7 animate-spin" style={{ color: 'var(--role-accent)' }} />
       </div>
     );
   }
