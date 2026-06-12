@@ -35,16 +35,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ eve
   // Notify proposer
   await NotificationService.send(
     event.authorId,
-    'New Volunteer Application',
-    `A student applied to volunteer for your event "${event.title}".`,
+    `${session.user.name} Requested to be a Volunteer`,
+    `"${session.user.name}" wants to volunteer for "${event.title}".`,
     eventId
   );
   // Notify mentor faculty if exists
   if (event.mentorFacultyId) {
     await NotificationService.send(
       event.mentorFacultyId,
-      'New Volunteer Application',
-      `A student applied to volunteer for "${event.title}".`,
+      `${session.user.name} Requested to be a Volunteer`,
+      `"${session.user.name}" wants to volunteer for "${event.title}".`,
       eventId
     );
   }

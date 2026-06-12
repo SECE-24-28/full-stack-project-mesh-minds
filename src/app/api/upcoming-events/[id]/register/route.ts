@@ -42,18 +42,30 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
 
   const alreadyInCalendar = await prisma.calendarEvent.findFirst({ where: { userId, eventId: id, roleType: 'PARTICIPANT' } });
 
+  const newCount = event._count.registrations + 1;
+
   await prisma.$transaction([
     prisma.registration.create({ data: { userId, eventId: id } }),
     prisma.user.update({ where: { id: userId }, data: { registeredEventsCount: { increment: 1 } } }),
     ...(alreadyInCalendar ? [] : [prisma.calendarEvent.create({ data: { userId, eventId: id, roleType: 'PARTICIPANT' } })]),
   ]);
 
-  await NotificationService.send(
-    event.authorId,
-    'New Registration',
-    `A student registered for your event "${event.title}".`,
-    id
-  );
+  // Notify proposer: short message, milestone every 10
+  if (newCount % 10 === 0) {
+    await NotificationService.send(
+      event.authorId,
+      'Registration Milestone',
+      `${newCount} members have registered for "${event.title}"!`,
+      id
+    );
+  } else {
+    await NotificationService.send(
+      event.authorId,
+      'New Registration',
+      `A new student registered for "${event.title}".`,
+      id
+    );
+  }
 
-  return NextResponse.json({ registered: true, registrationCount: event._count.registrations + 1 });
+  return NextResponse.json({ registered: true, registrationCount: newCount });
 }

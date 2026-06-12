@@ -93,8 +93,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     await PointsService.awardVolunteerPoints(app.studentId);
     await NotificationService.send(
       app.studentId,
-      'Volunteer Application Approved!',
-      `Congratulations! You have been selected as a volunteer for "${event.title}" by the event proposer.`,
+      'You Have Been Selected as a Volunteer!',
+      `You have been selected as a volunteer for "${event.title}".`,
       eventId
     );
 

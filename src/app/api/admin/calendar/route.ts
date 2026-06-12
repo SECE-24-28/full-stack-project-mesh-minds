@@ -9,14 +9,9 @@ export async function GET() {
 
   const [events, reminders] = await Promise.all([
     prisma.eventProposal.findMany({
-      where: { status: 'ACCEPTED' },
-      orderBy: { endDate: 'asc' },
-      select: {
-        id: true, title: true, description: true, category: true,
-        expectedAudience: true, budget: true, venue: true,
-        startDate: true, endDate: true, authorId: true,
-        author: { select: { name: true, department: true } },
-      },
+      where: { status: { in: ['ACCEPTED', 'COMPLETED'] } },
+      select: { id: true, title: true, startDate: true, endDate: true, status: true },
+      orderBy: { startDate: 'asc' },
     }),
     prisma.calendarEvent.findMany({
       where: { userId: session.user.id, roleType: 'PARTICIPANT' },
@@ -28,10 +23,11 @@ export async function GET() {
 
   return NextResponse.json({
     events: events.map((e) => ({
-      id: e.id, title: e.title, description: e.description, category: e.category,
-      expectedAudience: e.expectedAudience, budget: e.budget, venue: e.venue,
-      startDate: e.startDate.toISOString(), endDate: e.endDate.toISOString(),
-      authorName: e.author.name, authorDepartment: e.author.department,
+      id: e.id,
+      title: e.title,
+      start: e.startDate.toISOString(),
+      end: e.endDate.toISOString(),
+      status: e.status,
       reminded: remindedSet.has(e.id),
     })),
   });

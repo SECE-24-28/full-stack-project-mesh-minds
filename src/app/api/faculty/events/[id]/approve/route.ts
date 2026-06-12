@@ -48,10 +48,15 @@ export async function PATCH(
 
     await NotificationService.send(
       event.authorId,
-      'Event Approved by Faculty',
-      `Your event "${event.title}" has been approved by faculty and is now pending admin approval.`,
+      'Faculty Mentor Approved Your Proposal',
+      `Faculty mentor approved "${event.title}" — now awaiting admin review.`,
       event.id
     );
+    // Notify admin(s)
+    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } });
+    for (const admin of admins) {
+      await NotificationService.send(admin.id, 'New Proposal Alert', `"${event.title}" is awaiting your approval.`, event.id);
+    }
 
     return NextResponse.json({ event: updated, message: 'Event approved' });
   }
@@ -68,8 +73,8 @@ export async function PATCH(
 
     await NotificationService.send(
       event.authorId,
-      'Event Rejected',
-      `Your event "${event.title}" was rejected. Reason: ${body.rejectionReason || 'No reason provided'}`,
+      'Faculty Mentor Rejected Your Proposal',
+      `Faculty mentor rejected "${event.title}". Sorry, will catch up in other events.`,
       event.id
     );
 

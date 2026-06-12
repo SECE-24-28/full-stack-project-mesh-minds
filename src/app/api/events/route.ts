@@ -159,8 +159,8 @@ export async function POST(request: Request) {
     if (mentorId) {
       await NotificationService.send(
         mentorId,
-        'New Event Proposal',
-        `${session.user.name} has submitted an event proposal for your review.`,
+        'Faculty Mentor Request Received',
+        `${session.user.name} requested you as mentor for "${proposal.title}".`,
         proposal.id
       );
     }
