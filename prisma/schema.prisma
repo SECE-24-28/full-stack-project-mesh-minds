@@ -1,0 +1,297 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  FACULTY
+  ADMIN
+}
+
+enum EventStatus {
+  PENDING_FACULTY_APPROVAL
+  PENDING_ADMIN_APPROVAL
+  ACCEPTED
+  REJECTED
+  COMPLETED
+}
+
+enum CalendarRoleType {
+  PARTICIPANT
+  PROPOSER
+  VOLUNTEER
+  MENTOR
+}
+
+model User {
+  id String @id @default(cuid())
+
+  name         String
+  email        String @unique
+  passwordHash String
+
+  role Role
+
+  profileImage String?
+
+  points Int @default(0)
+
+  rollNumber            String? @unique
+  year                  Int?
+  section               String?
+  createdEventsCount    Int     @default(0)
+  registeredEventsCount Int     @default(0)
+
+  department String?
+
+  employeeId          String? @unique
+  mentoredEventsCount Int     @default(0)
+
+  emailVerified     Boolean @default(false)
+  verificationToken String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  votes                 Vote[]
+  comments              Comment[]
+  resourcePledges       ResourcePledge[]
+  fundingContributions  FundingContribution[]
+  bookings              Booking[]
+  pointTransactions     CampusPointTransaction[]
+  notifications         Notification[]
+  volunteerApplications VolunteerApplication[]   @relation("VolunteerStudent")
+  registrations         Registration[]
+  calendarEvents        CalendarEvent[]
+  epassRecords          EPass[]
+  authoredProposals     EventProposal[]          @relation("AuthoredProposals")
+  mentoredProposals     EventProposal[]          @relation("MentoredProposals")
+
+  @@index([email])
+}
+
+model EventProposal {
+  id               String      @id @default(cuid())
+  title            String
+  description      String
+  category         String
+  expectedAudience Int
+  budget           Float
+  startDate        DateTime
+  endDate          DateTime
+  venue            String
+  coverImage       String?
+  attachments      String?
+  status           EventStatus @default(PENDING_FACULTY_APPROVAL)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  authorId String
+  author   User   @relation("AuthoredProposals", fields: [authorId], references: [id], onDelete: Cascade)
+
+  mentorFacultyId String?
+  mentorFaculty   User?   @relation("MentoredProposals", fields: [mentorFacultyId], references: [id])
+
+  approvedById    String?
+  approvedAt      DateTime?
+  rejectionReason String?
+
+  completedAt DateTime?
+
+  participantLimit   Int?
+  requiredVolunteers Int?
+
+  adminRating  Int?
+  mentorRating Int?
+  eventRating  Int?
+
+  votes                 Vote[]
+  comments              Comment[]
+  resourcePledges       ResourcePledge[]
+  fundingContributions  FundingContribution[]
+  tickets               Ticket[]
+  bookings              Booking[]
+  notifications         Notification[]
+  volunteerApplications VolunteerApplication[]
+  registrations         Registration[]
+  calendarEvents        CalendarEvent[]
+  epassRecords          EPass[]
+
+  @@index([authorId])
+  @@index([mentorFacultyId])
+
+  @@index([status])
+  @@index([category])
+}
+
+model Registration {
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventId      String
+  event        EventProposal @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  registeredAt DateTime      @default(now())
+
+  @@unique([userId, eventId])
+  @@index([userId])
+  @@index([eventId])
+}
+
+model CalendarEvent {
+  id       String           @id @default(cuid())
+  userId   String
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventId  String
+  event    EventProposal    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  roleType CalendarRoleType
+
+  @@index([userId])
+  @@index([eventId])
+}
+
+model EPass {
+  id        String        @id @default(cuid())
+  eventId   String
+  event     EventProposal @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  studentId String
+  student   User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  passCode  String        @unique
+  qrCodeUrl String
+  createdAt DateTime      @default(now())
+
+  @@index([eventId])
+  @@index([studentId])
+  @@index([passCode])
+}
+
+model Vote {
+  id         String        @id @default(cuid())
+  proposalId String
+  proposal   EventProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime      @default(now())
+
+  @@unique([proposalId, userId])
+  @@index([proposalId])
+}
+
+model Comment {
+  id         String        @id @default(cuid())
+  content    String
+  proposalId String
+  proposal   EventProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentId   String?
+  parent     Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies    Comment[]     @relation("CommentReplies")
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([proposalId])
+}
+
+model FundingContribution {
+  id               String        @id @default(cuid())
+  amount           Float
+  contributionDate DateTime      @default(now())
+  proposalId       String
+  proposal         EventProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  contributorId    String
+  contributor      User          @relation(fields: [contributorId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId])
+}
+
+model ResourcePledge {
+  id           String        @id @default(cuid())
+  resourceType String
+  description  String
+  quantity     Int
+  availability String
+  proposalId   String
+  proposal     EventProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  pledgerId    String
+  pledger      User          @relation(fields: [pledgerId], references: [id], onDelete: Cascade)
+  createdAt    DateTime      @default(now())
+
+  @@index([proposalId])
+}
+
+model Ticket {
+  id            String        @id @default(cuid())
+  name          String
+  price         Float
+  capacity      Int
+  bookingWindow String
+  proposalId    String
+  proposal      EventProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  bookings      Booking[]
+  createdAt     DateTime      @default(now())
+
+  @@index([proposalId])
+}
+
+model Booking {
+  id          String        @id @default(cuid())
+  ticketId    String
+  ticket      Ticket        @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  proposalId  String
+  proposal    EventProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      String        @default("CONFIRMED")
+  bookingDate DateTime      @default(now())
+  ticketCode  String        @unique
+
+  @@index([userId])
+  @@index([proposalId])
+}
+
+model CampusPointTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  points    Int
+  reason    String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Notification {
+  id         String         @id @default(cuid())
+  userId     String
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title      String         @default("")
+  message    String
+  isRead     Boolean        @default(false)
+  createdAt  DateTime       @default(now())
+  proposalId String?
+  proposal   EventProposal? @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VolunteerApplication {
+  id        String        @id @default(cuid())
+  eventId   String
+  event     EventProposal @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  studentId String
+  student   User          @relation("VolunteerStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  skill     String
+  reason    String
+  status    String        @default("PENDING")
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@unique([eventId, studentId])
+  @@index([eventId])
+  @@index([studentId])
+}

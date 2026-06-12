@@ -1,0 +1,283 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────────────
+   CSS VARIABLES
+───────────────────────────────────────────── */
+:root {
+  --background: #F8FAFC;
+  --card: #FFFFFF;
+  --foreground: #0F172A;
+  --border: #E2E8F0;
+  --muted: #94A3B8;
+  --accent-student: #3B82F6;
+  --accent-faculty: #10B981;
+  --accent-admin: #8B5CF6;
+}
+
+.dark {
+  --background: #0F172A;
+  --card: #1E293B;
+  --foreground: #F8FAFC;
+  --border: #334155;
+  --muted: #64748B;
+}
+
+/* ─────────────────────────────────────────────
+   BASE
+───────────────────────────────────────────── */
+* { @apply box-border; }
+html { scroll-behavior: smooth; }
+body {
+  @apply antialiased;
+  font-feature-settings: "rlig" 1, "calt" 1;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* ─────────────────────────────────────────────
+   SCROLLBAR
+───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { @apply rounded-full; background: rgba(148,163,184,0.3); }
+::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.5); }
+
+/* ─────────────────────────────────────────────
+   NOISE TEXTURE OVERLAY
+───────────────────────────────────────────── */
+.role-noise {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 128px 128px;
+  opacity: 0.4;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+/* ─────────────────────────────────────────────
+   STUDENT BACKGROUND  ·  Blue / Cyan
+   Discord + Linear startup energy
+───────────────────────────────────────────── */
+.role-bg-student {
+  background-color: #060d1f;
+  background-image:
+    /* top-left blue orb */
+    radial-gradient(ellipse 80% 60% at -5% -10%, rgba(37,99,235,0.30) 0%, transparent 60%),
+    /* top-right cyan flare */
+    radial-gradient(ellipse 60% 50% at 105% 5%,  rgba(6,182,212,0.18) 0%, transparent 55%),
+    /* centre-left mid glow */
+    radial-gradient(ellipse 50% 40% at 20% 55%,  rgba(59,130,246,0.12) 0%, transparent 55%),
+    /* bottom-right accent */
+    radial-gradient(ellipse 70% 50% at 90% 95%,  rgba(99,102,241,0.14) 0%, transparent 55%),
+    /* subtle mesh grid */
+    linear-gradient(rgba(99,179,237,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99,179,237,0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 44px 44px, 44px 44px;
+}
+
+/* card layer for student */
+.role-bg-student .role-card {
+  background: rgba(13, 25, 55, 0.75);
+  border: 1px solid rgba(59,130,246,0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.role-bg-student .role-card:hover {
+  border-color: rgba(59,130,246,0.25);
+  background: rgba(13, 25, 55, 0.88);
+}
+
+/* stat card accent strip for student */
+.role-bg-student .role-stat-card {
+  background: linear-gradient(135deg, rgba(37,99,235,0.15) 0%, rgba(13,25,55,0.8) 60%);
+  border: 1px solid rgba(59,130,246,0.15);
+}
+.role-bg-student .role-stat-card:hover {
+  border-color: rgba(59,130,246,0.30);
+  box-shadow: 0 0 24px rgba(59,130,246,0.10), 0 8px 32px rgba(0,0,0,0.3);
+}
+
+/* ─────────────────────────────────────────────
+   FACULTY BACKGROUND  ·  Emerald / Teal
+   Calm, structured, academic feel
+───────────────────────────────────────────── */
+.role-bg-faculty {
+  background-color: #050f0e;
+  background-image:
+    radial-gradient(ellipse 75% 55% at 0%   0%,   rgba(6,120,90,0.28)   0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 100% 10%,  rgba(20,184,166,0.15) 0%, transparent 55%),
+    radial-gradient(ellipse 45% 35% at 30%  70%,  rgba(16,185,129,0.10) 0%, transparent 55%),
+    radial-gradient(ellipse 65% 45% at 85%  90%,  rgba(5,150,105,0.12)  0%, transparent 55%),
+    linear-gradient(rgba(20,184,166,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20,184,166,0.025) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 48px 48px, 48px 48px;
+}
+
+.role-bg-faculty .role-card {
+  background: rgba(5, 18, 15, 0.78);
+  border: 1px solid rgba(16,185,129,0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.role-bg-faculty .role-card:hover {
+  border-color: rgba(16,185,129,0.25);
+  background: rgba(5, 18, 15, 0.90);
+}
+
+.role-bg-faculty .role-stat-card {
+  background: linear-gradient(135deg, rgba(6,78,59,0.20) 0%, rgba(5,18,15,0.80) 60%);
+  border: 1px solid rgba(16,185,129,0.15);
+}
+.role-bg-faculty .role-stat-card:hover {
+  border-color: rgba(16,185,129,0.30);
+  box-shadow: 0 0 24px rgba(16,185,129,0.10), 0 8px 32px rgba(0,0,0,0.3);
+}
+
+/* ─────────────────────────────────────────────
+   ADMIN BACKGROUND  ·  Indigo / Violet
+   Enterprise-grade, powerful, analytical
+───────────────────────────────────────────── */
+.role-bg-admin {
+  background-color: #06040f;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 5%   -5%,  rgba(88,28,220,0.28)  0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 100% 15%,  rgba(139,92,246,0.18) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 15%  65%,  rgba(79,70,229,0.12)  0%, transparent 55%),
+    radial-gradient(ellipse 65% 45% at 88%  88%,  rgba(109,40,217,0.15) 0%, transparent 55%),
+    /* subtle dot grid instead of lines — feels more enterprise */
+    radial-gradient(rgba(139,92,246,0.08) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 32px 32px;
+}
+
+.role-bg-admin .role-card {
+  background: rgba(10, 6, 22, 0.80);
+  border: 1px solid rgba(139,92,246,0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.role-bg-admin .role-card:hover {
+  border-color: rgba(139,92,246,0.25);
+  background: rgba(10, 6, 22, 0.92);
+}
+
+.role-bg-admin .role-stat-card {
+  background: linear-gradient(135deg, rgba(88,28,135,0.20) 0%, rgba(10,6,22,0.80) 60%);
+  border: 1px solid rgba(139,92,246,0.15);
+}
+.role-bg-admin .role-stat-card:hover {
+  border-color: rgba(139,92,246,0.30);
+  box-shadow: 0 0 24px rgba(139,92,246,0.12), 0 8px 32px rgba(0,0,0,0.4);
+}
+
+/* ─────────────────────────────────────────────
+   LIGHT MODE ROLE BACKGROUNDS
+   Soft gradient surfaces — NOT plain white
+───────────────────────────────────────────── */
+.light .role-bg-student,
+html:not(.dark) .role-bg-student {
+  background-color: #EFF6FF;
+  background-image:
+    radial-gradient(ellipse 70% 50% at -5% -5%,  rgba(59,130,246,0.12)  0%, transparent 60%),
+    radial-gradient(ellipse 55% 40% at 100% 5%,  rgba(6,182,212,0.08)   0%, transparent 55%),
+    radial-gradient(ellipse 40% 30% at 80% 80%,  rgba(99,102,241,0.07)  0%, transparent 55%),
+    linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 44px 44px, 44px 44px;
+}
+
+.light .role-bg-faculty,
+html:not(.dark) .role-bg-faculty {
+  background-color: #ECFDF5;
+  background-image:
+    radial-gradient(ellipse 70% 50% at 0%   0%,   rgba(16,185,129,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 40% at 100% 10%,  rgba(20,184,166,0.08) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 30% at 75%  85%,  rgba(5,150,105,0.06)  0%, transparent 55%),
+    linear-gradient(rgba(16,185,129,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16,185,129,0.04) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 48px 48px, 48px 48px;
+}
+
+.light .role-bg-admin,
+html:not(.dark) .role-bg-admin {
+  background-color: #F5F3FF;
+  background-image:
+    radial-gradient(ellipse 70% 50% at 5%   -5%,  rgba(139,92,246,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 40% at 100% 10%,  rgba(109,40,217,0.08) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 30% at 80%  80%,  rgba(79,70,229,0.07)  0%, transparent 55%),
+    radial-gradient(rgba(139,92,246,0.05) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 32px 32px;
+}
+
+/* light mode cards */
+.light .role-card,
+html:not(.dark) .role-card {
+  background: rgba(255,255,255,0.80);
+  border-color: rgba(0,0,0,0.06);
+  backdrop-filter: blur(8px);
+}
+
+html:not(.dark) .role-bg-student .role-card { border-color: rgba(59,130,246,0.12); }
+html:not(.dark) .role-bg-student .role-card:hover { border-color: rgba(59,130,246,0.25); box-shadow: 0 4px 20px rgba(59,130,246,0.08); }
+
+html:not(.dark) .role-bg-faculty .role-card { border-color: rgba(16,185,129,0.12); }
+html:not(.dark) .role-bg-faculty .role-card:hover { border-color: rgba(16,185,129,0.25); box-shadow: 0 4px 20px rgba(16,185,129,0.08); }
+
+html:not(.dark) .role-bg-admin .role-card { border-color: rgba(139,92,246,0.12); }
+html:not(.dark) .role-bg-admin .role-card:hover { border-color: rgba(139,92,246,0.25); box-shadow: 0 4px 20px rgba(139,92,246,0.08); }
+
+html:not(.dark) .role-stat-card {
+  background: rgba(255,255,255,0.90) !important;
+}
+
+/* ─────────────────────────────────────────────
+   SIDEBAR — matches active role background
+───────────────────────────────────────────── */
+.sidebar-student {
+  background: linear-gradient(180deg, rgba(6,13,31,0.98) 0%, rgba(6,13,31,0.95) 100%);
+  border-right: 1px solid rgba(59,130,246,0.10);
+}
+.sidebar-faculty {
+  background: linear-gradient(180deg, rgba(5,10,9,0.98) 0%, rgba(5,10,9,0.95) 100%);
+  border-right: 1px solid rgba(16,185,129,0.10);
+}
+.sidebar-admin {
+  background: linear-gradient(180deg, rgba(6,4,15,0.98) 0%, rgba(6,4,15,0.95) 100%);
+  border-right: 1px solid rgba(139,92,246,0.10);
+}
+
+/* light mode sidebar */
+html:not(.dark) .sidebar-student { background: rgba(239,246,255,0.95); border-right-color: rgba(59,130,246,0.12); }
+html:not(.dark) .sidebar-faculty { background: rgba(236,253,245,0.95); border-right-color: rgba(16,185,129,0.12); }
+html:not(.dark) .sidebar-admin   { background: rgba(245,243,255,0.95); border-right-color: rgba(139,92,246,0.12); }
+
+/* ─────────────────────────────────────────────
+   ANIMATIONS
+───────────────────────────────────────────── */
+@layer utilities {
+  .animate-fade-in   { animation: fadeIn  0.35s ease-out; }
+  .animate-slide-up  { animation: slideUp 0.40s ease-out; }
+
+  .glow-blue    { box-shadow: 0 0 20px rgba(59,130,246,0.18),  0 0 48px rgba(59,130,246,0.06); }
+  .glow-emerald { box-shadow: 0 0 20px rgba(16,185,129,0.18),  0 0 48px rgba(16,185,129,0.06); }
+  .glow-purple  { box-shadow: 0 0 20px rgba(139,92,246,0.18),  0 0 48px rgba(139,92,246,0.06); }
+
+  .glass {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .gradient-text-blue    { @apply bg-gradient-to-r from-blue-400    to-cyan-400    bg-clip-text text-transparent; }
+  .gradient-text-emerald { @apply bg-gradient-to-r from-emerald-400 to-teal-400    bg-clip-text text-transparent; }
+  .gradient-text-purple  { @apply bg-gradient-to-r from-violet-400  to-indigo-400  bg-clip-text text-transparent; }
+}
+
+@keyframes fadeIn  { from { opacity: 0; }                       to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Theme transition */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
