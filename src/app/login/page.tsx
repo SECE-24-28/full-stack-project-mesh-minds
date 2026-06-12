@@ -58,19 +58,19 @@ export default function LoginPage() {
     'MCA',
   ];
 
-  const activeRole = mode === 'login' ? roles.find((r) => r.value === loginRole)! : roles.find((r) => r.value === signupRole)!;
+  const activeRole = roles.find((r) => r.value === loginRole)!;
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
-    setLoading(true);
+    setLoginError('');
+    setLoginLoading(true);
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, role: loginRole }),
+      body: JSON.stringify({ email: loginEmail, password: loginPassword, role: loginRole }),
     });
-    setLoading(false);
-    if (!res.ok) { setError('Incorrect email or password. Please try again.'); return; }
+    setLoginLoading(false);
+    if (!res.ok) { setLoginError('Incorrect email or password. Please try again.'); return; }
     router.push('/dashboard');
   }
 
@@ -203,8 +203,8 @@ export default function LoginPage() {
                 <label className="saas-label">Email address</label>
                 <input
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
                   placeholder="you@university.edu"
                   required
                   className="saas-input"
@@ -215,9 +215,9 @@ export default function LoginPage() {
                 <label className="saas-label">Password</label>
                 <div className="relative">
                   <input
-                    type={showPw ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    type={showLoginPassword ? 'text' : 'password'}
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="••••••••"
                     required
                     className="saas-input"
@@ -225,28 +225,28 @@ export default function LoginPage() {
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPw(!showPw)}
+                    onClick={() => setShowLoginPassword(!showLoginPassword)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#64748B]"
                   >
-                    {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
 
-              {error && (
+              {loginError && (
                 <div className="flex items-center gap-2.5 rounded-xl border border-red-100 bg-red-50 px-4 py-3">
                   <div className="h-2 w-2 rounded-full bg-red-400 flex-shrink-0" />
-                  <p className="text-sm text-red-600">{error}</p>
+                  <p className="text-sm text-red-600">{loginError}</p>
                 </div>
               )}
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loginLoading}
                 className="w-full flex items-center justify-center gap-2 rounded-2xl text-white font-semibold text-sm h-[48px] mt-1 transition-all hover:opacity-90 disabled:opacity-60"
                 style={{ background: activeRole.color, boxShadow: `0 4px 16px ${activeRole.color}40` }}
               >
-                {loading ? (
+                {loginLoading ? (
                   <><Loader2 className="h-4 w-4 animate-spin" /> Signing in...</>
                 ) : (
                   <>Sign In <ArrowRight className="h-4 w-4" /></>

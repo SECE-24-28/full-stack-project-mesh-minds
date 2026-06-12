@@ -126,9 +126,10 @@ export default function ProposalsPage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {visibleProposals.map((proposal) => {
-            const status = statusConfig[proposal.status] ?? statusConfig.PENDING_FACULTY_APPROVAL;
-            const canDelete = session?.user.role === 'ADMIN' || proposal.authorId === session?.user.id;
+          {visible.map((proposal) => {
+            const catColor = categoryColors[proposal.category] ?? { bg: '#F1F5F9', text: '#64748B' };
+            const canDelete = (session?.user.role === 'ADMIN' || proposal.authorId === session?.user.id)
+                            && PENDING_STATUSES.includes(proposal.status);
 
             return (
               <div key={proposal.id} className="event-card">
