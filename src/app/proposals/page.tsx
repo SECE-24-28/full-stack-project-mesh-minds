@@ -16,6 +16,8 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   COMPLETED: { label: 'Completed', className: 'bg-slate-400/20 text-slate-300 border-slate-400/20' },
 };
 
+const PENDING_STATUSES = ['PENDING_FACULTY_APPROVAL', 'PENDING_ADMIN_APPROVAL'];
+
 const categoryColors: Record<string, string> = {
   Technical: 'bg-blue-500/10 text-blue-400',
   Cultural: 'bg-pink-500/10 text-pink-400',
@@ -110,7 +112,8 @@ export default function ProposalsPage() {
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {visibleProposals.map((proposal) => {
             const status = statusConfig[proposal.status] ?? statusConfig.PENDING_FACULTY_APPROVAL;
-            const canDelete = session?.user.role === 'ADMIN' || proposal.authorId === session?.user.id;
+            const canDelete = (session?.user.role === 'ADMIN' || proposal.authorId === session?.user.id)
+                            && PENDING_STATUSES.includes(proposal.status);
 
             return (
               <div key={proposal.id} className="group flex flex-col overflow-hidden rounded-2xl border border-white/5 bg-slate-900/50 transition-all duration-200 hover:border-white/10 hover:bg-slate-900/80">

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { NotificationService } from '@/lib/engagement/notification.service';
 
 export async function POST(request: Request, { params }: { params: Promise<{ eventId: string }> }) {
   const session = await auth();
@@ -8,12 +9,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ eve
   if (session.user.role !== 'STUDENT') return NextResponse.json({ message: 'Only students can apply' }, { status: 403 });
 
   const { eventId } = await params;
-  const { skill, reason } = await request.json();
-  if (!skill?.trim() || !reason?.trim()) {
-    return NextResponse.json({ message: 'Skill and reason are required' }, { status: 400 });
+  const { reason } = await request.json();
+  if (!reason?.trim()) {
+    return NextResponse.json({ message: 'Reason is required' }, { status: 400 });
   }
 
-  const event = await prisma.eventProposal.findUnique({ where: { id: eventId }, select: { status: true } });
+  const event = await prisma.eventProposal.findUnique({
+    where: { id: eventId },
+    select: { status: true, title: true, authorId: true, mentorFacultyId: true, requiredVolunteers: true },
+  });
   if (!event) return NextResponse.json({ message: 'Event not found' }, { status: 404 });
   if (event.status !== 'ACCEPTED') {
     return NextResponse.json({ message: 'Volunteering is only open for accepted events' }, { status: 403 });
@@ -25,8 +29,25 @@ export async function POST(request: Request, { params }: { params: Promise<{ eve
   if (existing) return NextResponse.json({ message: 'Already applied' }, { status: 409 });
 
   const application = await prisma.volunteerApplication.create({
-    data: { eventId, studentId: session.user.id, skill: skill.trim(), reason: reason.trim() },
+    data: { eventId, studentId: session.user.id, skill: '', reason: reason.trim() },
   });
+
+  // Notify proposer
+  await NotificationService.send(
+    event.authorId,
+    'New Volunteer Application',
+    `A student applied to volunteer for your event "${event.title}".`,
+    eventId
+  );
+  // Notify mentor faculty if exists
+  if (event.mentorFacultyId) {
+    await NotificationService.send(
+      event.mentorFacultyId,
+      'New Volunteer Application',
+      `A student applied to volunteer for "${event.title}".`,
+      eventId
+    );
+  }
 
   return NextResponse.json({ application }, { status: 201 });
 }

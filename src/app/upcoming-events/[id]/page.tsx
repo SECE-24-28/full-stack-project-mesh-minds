@@ -6,7 +6,7 @@ import { useSession } from '@/lib/auth-client';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Calendar, MapPin, Users, DollarSign, ThumbsUp,
-  Clock, CheckCircle, MessageSquare, Send, Loader2, UserCheck, Tag,
+  Clock, CheckCircle, MessageSquare, Send, Loader2, UserCheck, Tag, HandHeart, X,
 } from 'lucide-react';
 
 interface EventDetail {
@@ -70,6 +70,12 @@ export default function UpcomingEventDetailPage() {
   const [commentText, setCommentText] = useState('');
   const [commenting, setCommenting] = useState(false);
 
+  // Volunteer modal state
+  const [showVolunteerModal, setShowVolunteerModal] = useState(false);
+  const [volunteerReason, setVolunteerReason] = useState('');
+  const [applyingVolunteer, setApplyingVolunteer] = useState(false);
+  const [hasAppliedVolunteer, setHasAppliedVolunteer] = useState(false);
+
   useEffect(() => {
     if (!params.id) return;
     fetch(`/api/upcoming-events/${params.id}`)
@@ -77,6 +83,7 @@ export default function UpcomingEventDetailPage() {
       .then((d) => {
         setEvent(d.event ?? null);
         setComments(d.comments ?? []);
+        setHasAppliedVolunteer(d.hasAppliedVolunteer ?? false);
       })
       .catch(() => toast.error('Failed to load event'))
       .finally(() => setLoading(false));
@@ -111,6 +118,29 @@ export default function UpcomingEventDetailPage() {
     const data = await res.json();
     setEvent((ev) => ev ? { ...ev, isRegistered: data.registered, registrationCount: data.registrationCount } : ev);
     toast.success(data.registered ? 'Registered successfully!' : 'Registration cancelled');
+  }
+
+  async function handleVolunteerApply(e: React.FormEvent) {
+    e.preventDefault();
+    if (!event || !volunteerReason.trim()) return;
+    setApplyingVolunteer(true);
+
+    const res = await fetch(`/api/engagement/events/${event.id}/volunteer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: volunteerReason }),
+    });
+    setApplyingVolunteer(false);
+
+    if (!res.ok) {
+      const d = await res.json();
+      toast.error(d.message || 'Application failed');
+      return;
+    }
+    setHasAppliedVolunteer(true);
+    setShowVolunteerModal(false);
+    setVolunteerReason('');
+    toast.success('Volunteer application submitted!');
   }
 
   async function handleComment(e: React.FormEvent) {
@@ -159,6 +189,7 @@ export default function UpcomingEventDetailPage() {
   const isFull = spotsLeft !== null && spotsLeft <= 0;
   const isStudent = session?.user.role === 'STUDENT';
   const canVote = ['PENDING_FACULTY_APPROVAL', 'PENDING_ADMIN_APPROVAL', 'ACCEPTED'].includes(event.status);
+  const canVolunteer = isStudent && event.status === 'ACCEPTED' && (event.requiredVolunteers ?? 0) > 0;
 
   return (
     <div className="animate-fade-in p-8">
@@ -193,6 +224,11 @@ export default function UpcomingEventDetailPage() {
                 {event.isRegistered && (
                   <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-medium text-emerald-400">
                     <UserCheck className="h-3 w-3" /> Registered
+                  </span>
+                )}
+                {hasAppliedVolunteer && (
+                  <span className="flex items-center gap-1 rounded-full bg-violet-500/15 px-2.5 py-0.5 text-xs font-medium text-violet-400">
+                    <HandHeart className="h-3 w-3" /> Volunteer Applied
                   </span>
                 )}
               </div>
@@ -245,6 +281,22 @@ export default function UpcomingEventDetailPage() {
                     <UserCheck className="h-4 w-4" />
                   )}
                   {event.isRegistered ? 'Cancel Registration' : isFull ? 'Event Full' : 'Register'}
+                </button>
+              )}
+
+              {/* Apply as Volunteer — students only, ACCEPTED events with volunteer slots */}
+              {canVolunteer && (
+                <button
+                  onClick={() => setShowVolunteerModal(true)}
+                  disabled={hasAppliedVolunteer}
+                  className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all disabled:opacity-60 ${
+                    hasAppliedVolunteer
+                      ? 'bg-violet-500/20 text-violet-300 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-violet-500 to-purple-500 text-white hover:opacity-90'
+                  }`}
+                >
+                  <HandHeart className="h-4 w-4" />
+                  {hasAppliedVolunteer ? 'Applied as Volunteer' : 'Apply as Volunteer'}
                 </button>
               )}
             </div>
@@ -344,6 +396,62 @@ export default function UpcomingEventDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Volunteer Apply Modal */}
+      {showVolunteerModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl">
+            <div className="mb-5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <HandHeart className="h-5 w-5 text-violet-400" />
+                <h2 className="text-lg font-bold text-white">Apply as Volunteer</h2>
+              </div>
+              <button onClick={() => setShowVolunteerModal(false)} className="text-slate-500 hover:text-slate-300">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="mb-4 text-sm text-slate-400">
+              Your application will be reviewed by the event proposer and faculty mentor.
+            </p>
+
+            <form onSubmit={handleVolunteerApply} className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-300">
+                  Why do you wish to be a volunteer? <span className="text-red-400">*</span>
+                </label>
+                <textarea
+                  value={volunteerReason}
+                  onChange={(e) => setVolunteerReason(e.target.value)}
+                  placeholder="Tell us why you want to volunteer and what you can contribute..."
+                  rows={4}
+                  required
+                  className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
+                />
+                <p className="mt-1 text-xs text-slate-600">{volunteerReason.length}/500 characters</p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowVolunteerModal(false)}
+                  className="flex-1 rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm font-semibold text-slate-300 transition-all hover:bg-white/10"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={applyingVolunteer || !volunteerReason.trim()}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-purple-500 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-60"
+                >
+                  {applyingVolunteer ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                  Submit Application
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -7,7 +7,7 @@ import { useSession } from '@/lib/auth-client';
 import { Proposal, CommentRecord, FundingContributionRecord } from '@/types';
 import {
   ThumbsUp, MessageSquare, DollarSign, ArrowLeft, MapPin, Users,
-  Calendar, Tag, Loader2, Send, CheckCircle, Star,
+  Calendar, Tag, Loader2, Send, CheckCircle, Star, HandHeart, Trash2, XCircle,
 } from 'lucide-react';
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -16,6 +16,26 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   ACCEPTED: { label: 'Accepted', className: 'bg-emerald-500/20 text-emerald-400' },
   REJECTED: { label: 'Rejected', className: 'bg-red-500/20 text-red-400' },
   COMPLETED: { label: 'Completed', className: 'bg-slate-400/20 text-slate-300' },
+};
+
+const PENDING_STATUSES = ['PENDING_FACULTY_APPROVAL', 'PENDING_ADMIN_APPROVAL'];
+
+interface VolunteerApp {
+  id: string;
+  studentName: string;
+  studentEmail: string;
+  department?: string | null;
+  rollNumber?: string | null;
+  reason: string;
+  status: string;
+  createdAt: string;
+}
+
+const appStatusBadge: Record<string, string> = {
+  PENDING: 'bg-amber-500/20 text-amber-400',
+  PROPOSER_SELECTED: 'bg-emerald-500/20 text-emerald-400',
+  SELECTED: 'bg-emerald-500/20 text-emerald-400',
+  REJECTED: 'bg-red-500/20 text-red-400',
 };
 
 export default function ProposalDetailsPage() {
@@ -34,6 +54,12 @@ export default function ProposalDetailsPage() {
   const [mentorRating, setMentorRating] = useState(0);
   const [submittingRating, setSubmittingRating] = useState(false);
   const [ratingDone, setRatingDone] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // Volunteer management state
+  const [volunteerApps, setVolunteerApps] = useState<VolunteerApp[]>([]);
+  const [volunteerMeta, setVolunteerMeta] = useState<{ proposerQuota: number | null; selectedByProposer: number }>({ proposerQuota: null, selectedByProposer: 0 });
+  const [processingVolId, setProcessingVolId] = useState<string | null>(null);
 
   async function handleMentorRating() {
     if (!mentorRating) return;
@@ -60,6 +86,19 @@ export default function ProposalDetailsPage() {
         setFunding(d.funding ?? []);
       });
   }, [params.id]);
+
+  // Load volunteer apps when proposal is loaded and user is the proposer
+  useEffect(() => {
+    if (!proposal || !session) return;
+    if (proposal.authorId !== session.user.id && session.user.role !== 'ADMIN') return;
+
+    fetch(`/api/events/${proposal.id}/volunteers`)
+      .then((r) => r.json())
+      .then((d) => {
+        setVolunteerApps(d.applications ?? []);
+        setVolunteerMeta({ proposerQuota: d.proposerQuota, selectedByProposer: d.selectedByProposer ?? 0 });
+      });
+  }, [proposal, session]);
 
   async function handleVote() {
     setVoting(true);
@@ -108,6 +147,36 @@ export default function ProposalDetailsPage() {
     toast.success('Contribution recorded!');
   }
 
+  async function handleDelete() {
+    if (!proposal) return;
+    if (!confirm('Are you sure you want to delete this event? This cannot be undone.')) return;
+    setDeleting(true);
+    const res = await fetch(`/api/events/${proposal.id}`, { method: 'DELETE' });
+    setDeleting(false);
+    if (!res.ok) { const d = await res.json(); toast.error(d.message || 'Delete failed'); return; }
+    toast.success('Event deleted');
+    router.push('/proposals');
+  }
+
+  async function handleVolunteerAction(applicationId: string, action: 'approve' | 'deny') {
+    if (!proposal) return;
+    setProcessingVolId(applicationId + action);
+    const res = await fetch(`/api/events/${proposal.id}/volunteers`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ applicationId, action }),
+    });
+    setProcessingVolId(null);
+    if (!res.ok) { const d = await res.json(); toast.error(d.message || 'Action failed'); return; }
+
+    const newStatus = action === 'approve' ? 'PROPOSER_SELECTED' : 'REJECTED';
+    setVolunteerApps((apps) => apps.map((a) => a.id === applicationId ? { ...a, status: newStatus } : a));
+    if (action === 'approve') {
+      setVolunteerMeta((m) => ({ ...m, selectedByProposer: m.selectedByProposer + 1 }));
+    }
+    toast.success(action === 'approve' ? 'Volunteer approved!' : 'Application denied');
+  }
+
   const totalFunding = funding.reduce((sum, f) => sum + f.amount, 0);
   const fundingProgress = proposal ? Math.min((totalFunding / proposal.budget) * 100, 100) : 0;
 
@@ -123,6 +192,10 @@ export default function ProposalDetailsPage() {
   }
 
   const status = statusConfig[proposal.status] ?? statusConfig.PENDING_FACULTY_APPROVAL;
+  const isProposer = session?.user.id === proposal.authorId;
+  const isAdmin = session?.user.role === 'ADMIN';
+  const canDelete = (isProposer || isAdmin) && PENDING_STATUSES.includes(proposal.status);
+  const showVolunteerPanel = (isProposer || isAdmin) && (proposal.requiredVolunteers ?? 0) > 0;
 
   return (
     <div className="animate-fade-in p-8">
@@ -144,18 +217,30 @@ export default function ProposalDetailsPage() {
               <p className="mt-2 text-sm leading-relaxed text-slate-400">{proposal.description}</p>
               <p className="mt-3 text-xs text-slate-600">Proposed by <span className="text-slate-400">{proposal.authorName}</span></p>
             </div>
-            <button
-              onClick={handleVote}
-              disabled={voting || !session}
-              className={`flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-semibold transition-all disabled:opacity-60 ${
-                voted
-                  ? 'border-blue-500/40 bg-blue-500/20 text-blue-300 hover:bg-blue-500/10'
-                  : 'border-white/10 bg-white/5 text-slate-300 hover:border-blue-500/30 hover:bg-blue-500/10 hover:text-blue-300'
-              }`}
-            >
-              {voting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-4 w-4" />}
-              {proposal.voteCount} votes
-            </button>
+            <div className="flex items-start gap-2">
+              <button
+                onClick={handleVote}
+                disabled={voting || !session}
+                className={`flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-semibold transition-all disabled:opacity-60 ${
+                  voted
+                    ? 'border-blue-500/40 bg-blue-500/20 text-blue-300 hover:bg-blue-500/10'
+                    : 'border-white/10 bg-white/5 text-slate-300 hover:border-blue-500/30 hover:bg-blue-500/10 hover:text-blue-300'
+                }`}
+              >
+                {voting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-4 w-4" />}
+                {proposal.voteCount} votes
+              </button>
+              {canDelete && (
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm font-semibold text-red-400 transition-all hover:bg-red-500/20 disabled:opacity-60"
+                >
+                  {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  Delete
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Details grid */}
@@ -179,8 +264,81 @@ export default function ProposalDetailsPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        {/* Left — Comments */}
+        {/* Left — Comments + Volunteer Panel */}
         <div className="space-y-6">
+
+          {/* Volunteer Applications Panel — proposer only */}
+          {showVolunteerPanel && (
+            <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <HandHeart className="h-4 w-4 text-violet-400" />
+                <h2 className="font-semibold text-white">Volunteer Applications</h2>
+                <span className="ml-auto rounded-full bg-white/5 px-2 py-0.5 text-xs text-slate-500">
+                  {volunteerApps.length} total
+                </span>
+              </div>
+
+              {volunteerMeta.proposerQuota !== null && (
+                <div className="mb-4 flex items-center gap-2 rounded-xl border border-violet-500/20 bg-violet-500/10 px-4 py-2.5">
+                  <p className="text-xs text-violet-300">
+                    You can select up to <span className="font-bold">{volunteerMeta.proposerQuota}</span> volunteers
+                    ({volunteerMeta.selectedByProposer} selected).
+                    The remaining {(proposal.requiredVolunteers ?? 0) - volunteerMeta.proposerQuota} slots are reserved for the faculty mentor.
+                  </p>
+                </div>
+              )}
+
+              {volunteerApps.length === 0 ? (
+                <p className="py-6 text-center text-sm text-slate-600">No volunteer applications yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {volunteerApps.map((app) => (
+                    <div key={app.id} className="rounded-xl border border-white/5 bg-white/3 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-semibold text-slate-200">{app.studentName}</p>
+                            {app.rollNumber && <span className="text-xs text-slate-500">{app.rollNumber}</span>}
+                            {app.department && <span className="text-xs text-slate-500">· {app.department}</span>}
+                            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${appStatusBadge[app.status] ?? appStatusBadge.PENDING}`}>
+                              {app.status === 'PROPOSER_SELECTED' ? 'Selected by You' : app.status}
+                            </span>
+                          </div>
+                          <p className="mt-1.5 text-xs text-slate-400 leading-relaxed">{app.reason}</p>
+                          <p className="mt-1 text-xs text-slate-600">{new Date(app.createdAt).toLocaleDateString()}</p>
+                        </div>
+                        {app.status === 'PENDING' && (
+                          <div className="flex flex-shrink-0 gap-2">
+                            <button
+                              onClick={() => handleVolunteerAction(app.id, 'approve')}
+                              disabled={
+                                processingVolId === app.id + 'approve' ||
+                                (volunteerMeta.proposerQuota !== null && volunteerMeta.selectedByProposer >= volunteerMeta.proposerQuota)
+                              }
+                              className="flex items-center gap-1 rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/30 disabled:opacity-50"
+                            >
+                              {processingVolId === app.id + 'approve' ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3" />}
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleVolunteerAction(app.id, 'deny')}
+                              disabled={processingVolId === app.id + 'deny'}
+                              className="flex items-center gap-1 rounded-lg bg-red-500/20 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/30 disabled:opacity-50"
+                            >
+                              {processingVolId === app.id + 'deny' ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
+                              Deny
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Comments */}
           <div className="rounded-2xl border border-white/5 bg-slate-900/50 p-6">
             <div className="mb-5 flex items-center gap-2">
               <MessageSquare className="h-4 w-4 text-blue-400" />
@@ -268,6 +426,7 @@ export default function ProposalDetailsPage() {
               )}
             </div>
           )}
+
           <div className="rounded-2xl border border-white/5 bg-slate-900/50 p-6">
             <div className="mb-4 flex items-center gap-2">
               <DollarSign className="h-4 w-4 text-emerald-400" />

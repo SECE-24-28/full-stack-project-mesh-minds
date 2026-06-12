@@ -9,12 +9,13 @@ import { Upload, Loader2, User as UserIcon } from 'lucide-react';
 
 const DEPARTMENTS = [
   'Computer Science and Engineering',
+  'Artificial Intelligence and Machine Learning',
+  'Artificial Intelligence and Data Science',
   'Information Technology',
   'Electronics and Communication Engineering',
   'Electrical and Electronics Engineering',
   'Mechanical Engineering',
   'Civil Engineering',
-  'Artificial Intelligence and Data Science',
   'Cyber Security',
   'MBA',
   'MCA',
