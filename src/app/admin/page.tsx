@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useSession } from '@/lib/auth-client';
-import { Users, Calendar, Clock, CheckCircle, XCircle, TrendingUp, ArrowRight } from 'lucide-react';
+import { Users, Calendar, Clock, CheckCircle, TrendingUp, ArrowRight, BarChart2, Loader2 } from 'lucide-react';
 
 interface AdminStats {
   totalUsers: number;
@@ -19,11 +19,20 @@ interface AdminStats {
     id: string;
     title: string;
     authorName: string;
-    authorRole: string;
     startDate: string;
     registrations: number;
   }>;
 }
+
+const statItems = (s: AdminStats) => [
+  { title: 'Total Users',   value: s.totalUsers,    icon: Users,       color: '#9FA1FF' },
+  { title: 'Students',      value: s.totalStudents, icon: Users,       color: '#6BB6FF' },
+  { title: 'Faculty',       value: s.totalFaculty,  icon: Users,       color: '#7EDC92' },
+  { title: 'Total Events',  value: s.totalEvents,   icon: Calendar,    color: '#F59E0B' },
+  { title: 'Pending',       value: s.pendingEvents,  icon: Clock,       color: '#F59E0B' },
+  { title: 'Accepted',      value: s.acceptedEvents, icon: CheckCircle, color: '#7EDC92' },
+  { title: 'Completed',     value: s.completedEvents,icon: TrendingUp,  color: '#9FA1FF' },
+];
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -33,122 +42,126 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     if (sessionLoading) return;
-
-    if (!session) {
-      router.push('/login');
-      return;
-    }
-
-    if (session.user.role !== 'ADMIN') {
-      router.push('/dashboard');
-      return;
-    }
-
+    if (!session) { router.push('/login'); return; }
+    if (session.user.role !== 'ADMIN') { router.push('/dashboard'); return; }
     fetch('/api/admin/stats')
       .then((r) => r.json())
-      .then((data) => {
-        setStats(data.stats);
-        setLoading(false);
-      })
-      .catch(() => {
-        toast.error('Failed to load stats');
-        setLoading(false);
-      });
+      .then((d) => { setStats(d.stats); setLoading(false); })
+      .catch(() => { toast.error('Failed to load stats'); setLoading(false); });
   }, [session, sessionLoading, router]);
 
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center p-8">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-          <p className="text-sm text-slate-500">Loading...</p>
-        </div>
+        <Loader2 className="h-7 w-7 animate-spin" style={{ color: 'var(--role-accent)' }} />
       </div>
     );
   }
 
   if (!stats) return null;
 
-  const StatCard = ({ title, value, icon: Icon, gradient }: { title: string; value: number; icon: React.ElementType; gradient: string }) => (
-    <div className="role-stat-card rounded-2xl p-5 transition-all duration-300 hover:-translate-y-0.5">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-slate-500">{title}</p>
-          <p className="mt-2 text-3xl font-bold text-white">{value}</p>
-        </div>
-        <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${gradient}`}>
-          <Icon className="h-5 w-5 text-white" />
-        </div>
-      </div>
-    </div>
-  );
+  const items = statItems(stats);
 
   return (
-    <div className="animate-fade-in p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
-        <p className="mt-1 text-sm text-slate-500">Manage users and events across the platform.</p>
-      </div>
-
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Total Users" value={stats.totalUsers} icon={Users} gradient="from-violet-500 to-indigo-500" />
-        <StatCard title="Students" value={stats.totalStudents} icon={Users} gradient="from-blue-500 to-cyan-500" />
-        <StatCard title="Faculty" value={stats.totalFaculty} icon={Users} gradient="from-emerald-500 to-teal-500" />
-        <StatCard title="Total Events" value={stats.totalEvents} icon={Calendar} gradient="from-amber-500 to-orange-500" />
-      </div>
-
-      <div className="mb-8 grid gap-4 sm:grid-cols-3">
-        <StatCard title="Pending Approval" value={stats.pendingEvents} icon={Clock} gradient="from-amber-500 to-orange-500" />
-        <StatCard title="Accepted" value={stats.acceptedEvents} icon={CheckCircle} gradient="from-emerald-500 to-teal-500" />
-        <StatCard title="Completed" value={stats.completedEvents} icon={TrendingUp} gradient="from-cyan-500 to-blue-500" />
-      </div>
-
-      <div className="role-card rounded-2xl p-6">
-        <h3 className="mb-4 text-lg font-semibold text-white">Quick Actions</h3>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <button
-            onClick={() => router.push('/admin/pending-events')}
-            className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-4 text-left transition-all hover:bg-white/8"
-          >
-            <div className="flex items-center gap-3">
-              <Clock className="h-5 w-5 text-amber-400" />
-              <span className="font-medium text-slate-200">Pending Events</span>
-            </div>
-            <ArrowRight className="h-4 w-4 text-slate-500" />
-          </button>
-          <button
-            onClick={() => router.push('/admin/users')}
-            className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-4 text-left transition-all hover:bg-white/8"
-          >
-            <div className="flex items-center gap-3">
-              <Users className="h-5 w-5 text-violet-400" />
-              <span className="font-medium text-slate-200">Manage Users</span>
-            </div>
-            <ArrowRight className="h-4 w-4 text-slate-500" />
-          </button>
+    <div className="page-content animate-fade-up" data-role="ADMIN">
+      <div className="page-header flex items-start justify-between">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="role-tag"><BarChart2 className="h-3 w-3" /> Admin Dashboard</span>
+          </div>
+          <h1 className="page-title">System Overview</h1>
+          <p className="page-subtitle">Manage users and events across the platform</p>
+        </div>
+        <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full border border-[#E9ECF5] bg-white text-sm text-[#64748B]">
+          <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+          System Operational
         </div>
       </div>
 
-      <div className="role-card mt-6 rounded-2xl p-6">
-        <h3 className="mb-4 text-lg font-semibold text-white">Accepted Events</h3>
-        {stats.acceptedEventList?.length ? (
-          <div className="space-y-3">
-            {stats.acceptedEventList.map((event) => (
-              <div key={event.id} className="flex items-center justify-between rounded-xl border border-white/5 bg-white/3 px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium text-slate-200">{event.title}</p>
-                  <p className="text-xs text-slate-500">
-                    by {event.authorName} · {new Date(event.startDate).toLocaleDateString()}
-                  </p>
-                </div>
-                <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-medium text-emerald-400">
-                  {event.registrations} registered
-                </span>
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-5 mb-5">
+        {items.slice(0, 4).map((s) => (
+          <div key={s.title} className="stat-card">
+            <div className="flex items-start justify-between mb-4">
+              <div className="stat-icon-circle" style={{ background: `${s.color}18` }}>
+                <s.icon className="h-5 w-5" style={{ color: s.color }} />
               </div>
-            ))}
+            </div>
+            <p className="text-3xl font-bold text-[#0F172A] leading-none">{s.value}</p>
+            <p className="text-sm font-medium text-[#64748B] mt-1.5">{s.title}</p>
           </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-2 xl:grid-cols-3 gap-5 mb-7">
+        {items.slice(4).map((s) => (
+          <div key={s.title} className="stat-card">
+            <div className="flex items-start justify-between mb-4">
+              <div className="stat-icon-circle" style={{ background: `${s.color}18` }}>
+                <s.icon className="h-5 w-5" style={{ color: s.color }} />
+              </div>
+            </div>
+            <p className="text-3xl font-bold text-[#0F172A] leading-none">{s.value}</p>
+            <p className="text-sm font-medium text-[#64748B] mt-1.5">{s.title}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Quick Actions */}
+      <div className="saas-card p-6 mb-6">
+        <p className="section-title mb-4">Quick Actions</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[
+            { label: 'Review Pending Events', icon: Clock,  href: '/admin/pending-events', color: '#F59E0B' },
+            { label: 'Manage Users',          icon: Users,  href: '/admin/users',          color: '#9FA1FF' },
+          ].map((action) => (
+            <button
+              key={action.href}
+              onClick={() => router.push(action.href)}
+              className="flex items-center justify-between rounded-2xl border border-[#E9ECF5] p-4 text-left hover:bg-[#F8F9FC] transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-xl flex items-center justify-center" style={{ background: `${action.color}18` }}>
+                  <action.icon className="h-4 w-4" style={{ color: action.color }} />
+                </div>
+                <span className="font-semibold text-[#1E293B] text-sm">{action.label}</span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-[#94A3B8]" />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Accepted Events */}
+      <div className="saas-table-wrap">
+        <div className="px-6 py-5 border-b border-[#E9ECF5]">
+          <p className="section-title">Accepted Events</p>
+          <p className="section-subtitle">Currently active campus events</p>
+        </div>
+        {stats.acceptedEventList?.length ? (
+          <table className="saas-table">
+            <thead>
+              <tr>
+                <th>Event</th>
+                <th>Author</th>
+                <th>Date</th>
+                <th>Registrations</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stats.acceptedEventList.map((event) => (
+                <tr key={event.id}>
+                  <td className="font-medium text-[#1E293B]">{event.title}</td>
+                  <td className="text-[#64748B]">{event.authorName}</td>
+                  <td className="text-[#94A3B8]">{new Date(event.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                  <td>
+                    <span className="badge badge-accepted">{event.registrations} registered</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         ) : (
-          <p className="py-8 text-center text-sm text-slate-500">No accepted events yet.</p>
+          <p className="py-10 text-center text-sm text-[#94A3B8]">No accepted events yet.</p>
         )}
       </div>
     </div>

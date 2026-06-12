@@ -6,24 +6,34 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useSession } from '@/lib/auth-client';
 import { Proposal } from '@/types';
-import { Calendar, DollarSign, FileText, Loader2, MapPin, Plus, Trash2, Users } from 'lucide-react';
+import {
+  Calendar, DollarSign, FileText, Loader2, MapPin, Plus, Trash2,
+  Users, Tag, TrendingUp, Search,
+} from 'lucide-react';
 
-const statusConfig: Record<string, { label: string; className: string }> = {
-  PENDING_FACULTY_APPROVAL: { label: 'Faculty Review', className: 'bg-amber-500/20 text-amber-400 border-amber-500/20' },
-  PENDING_ADMIN_APPROVAL: { label: 'Admin Review', className: 'bg-blue-500/20 text-blue-400 border-blue-500/20' },
-  ACCEPTED: { label: 'Accepted', className: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20' },
-  REJECTED: { label: 'Rejected', className: 'bg-red-500/20 text-red-400 border-red-500/20' },
-  COMPLETED: { label: 'Completed', className: 'bg-slate-400/20 text-slate-300 border-slate-400/20' },
+const statusBadge: Record<string, string> = {
+  PENDING_FACULTY_APPROVAL: 'badge badge-pending',
+  PENDING_ADMIN_APPROVAL:   'badge badge-review',
+  ACCEPTED:                 'badge badge-accepted',
+  REJECTED:                 'badge badge-rejected',
+  COMPLETED:                'badge badge-completed',
+};
+const statusLabel: Record<string, string> = {
+  PENDING_FACULTY_APPROVAL: 'Faculty Review',
+  PENDING_ADMIN_APPROVAL:   'Admin Review',
+  ACCEPTED:                 'Accepted',
+  REJECTED:                 'Rejected',
+  COMPLETED:                'Completed',
 };
 
-const categoryColors: Record<string, string> = {
-  Technical: 'bg-blue-500/10 text-blue-400',
-  Cultural: 'bg-pink-500/10 text-pink-400',
-  Sports: 'bg-orange-500/10 text-orange-400',
-  Workshop: 'bg-amber-500/10 text-amber-400',
-  Seminar: 'bg-violet-500/10 text-violet-400',
-  Hackathon: 'bg-cyan-500/10 text-cyan-400',
-  'Community Service': 'bg-emerald-500/10 text-emerald-400',
+const categoryColors: Record<string, { bg: string; text: string }> = {
+  Technical:         { bg: '#EFF6FF', text: '#2563EB' },
+  Cultural:          { bg: '#FDF2F8', text: '#BE185D' },
+  Sports:            { bg: '#FFF7ED', text: '#C2410C' },
+  Workshop:          { bg: '#FFFBEB', text: '#B45309' },
+  Seminar:           { bg: '#F5F3FF', text: '#6D28D9' },
+  Hackathon:         { bg: '#ECFEFF', text: '#0E7490' },
+  'Community Service': { bg: '#F0FDF4', text: '#15803D' },
 };
 
 export default function ProposalsPage() {
@@ -32,14 +42,11 @@ export default function ProposalsPage() {
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!session) {
-      router.push('/login');
-      return;
-    }
-
+    if (!session) { router.push('/login'); return; }
     fetch('/api/events')
       .then((r) => r.json())
       .then((d) => setProposals(d.proposals || []))
@@ -47,115 +54,136 @@ export default function ProposalsPage() {
       .finally(() => setLoading(false));
   }, [session, sessionLoading, router]);
 
-  const visibleProposals = useMemo(() => {
+  const visible = useMemo(() => {
     if (!session?.user) return [];
-    if (session.user.role === 'ADMIN') return proposals;
-    return proposals.filter((proposal) => proposal.authorId === session.user.id);
-  }, [proposals, session]);
+    const base = session.user.role === 'ADMIN'
+      ? proposals
+      : proposals.filter((p) => p.authorId === session.user.id);
+    if (!search.trim()) return base;
+    const q = search.toLowerCase();
+    return base.filter((p) => p.title.toLowerCase().includes(q) || p.category.toLowerCase().includes(q));
+  }, [proposals, session, search]);
 
   async function handleDelete(id: string) {
     setDeletingId(id);
     const res = await fetch(`/api/events/${id}`, { method: 'DELETE' });
     setDeletingId(null);
-
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      toast.error(data.message || 'Could not delete event');
-      return;
-    }
-
-    setProposals((items) => items.filter((item) => item.id !== id));
-    toast.success('Event deleted');
+    if (!res.ok) { const d = await res.json().catch(() => ({})); toast.error(d.message || 'Delete failed'); return; }
+    setProposals((p) => p.filter((e) => e.id !== id));
+    toast.success('Proposal deleted');
   }
 
   if (loading || sessionLoading) {
     return (
       <div className="flex h-full items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+        <Loader2 className="h-7 w-7 animate-spin" style={{ color: 'var(--role-accent)' }} />
       </div>
     );
   }
 
+  const isAdmin = session?.user?.role === 'ADMIN';
+
   return (
-    <div className="animate-fade-in p-8">
-      <div className="mb-8 flex items-center justify-between">
+    <div className="page-content animate-fade-up">
+      {/* Header */}
+      <div className="page-header flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">
-            {session?.user.role === 'ADMIN' ? 'Event Proposals' : 'My Proposals'}
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Track proposal status from submission through approval.
-          </p>
+          <h1 className="page-title">{isAdmin ? 'All Proposals' : 'My Proposals'}</h1>
+          <p className="page-subtitle">Track proposal status from submission through approval</p>
         </div>
-        {session?.user.role !== 'ADMIN' && (
-          <Link
-            href="/events/create"
-            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.98]"
-          >
+        {!isAdmin && (
+          <Link href="/events/create" className="btn-primary flex-shrink-0">
             <Plus className="h-4 w-4" />
             New Proposal
           </Link>
         )}
       </div>
 
-      {visibleProposals.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-white/5 bg-slate-900/50 py-20 text-center">
-          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-500/10">
-            <FileText className="h-7 w-7 text-blue-400" />
+      {/* Search */}
+      <div className="relative mb-6 max-w-sm">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
+        <input
+          type="text"
+          placeholder="Search proposals..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="saas-input pl-11"
+          style={{ height: '44px' }}
+        />
+      </div>
+
+      {visible.length === 0 ? (
+        <div className="saas-card flex flex-col items-center justify-center py-20 text-center">
+          <div className="h-14 w-14 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'var(--role-soft)' }}>
+            <FileText className="h-7 w-7" style={{ color: 'var(--role-accent)' }} />
           </div>
-          <p className="font-semibold text-slate-200">No proposals yet</p>
-          <p className="mt-1 text-sm text-slate-500">Submit a new proposal when your event idea is ready.</p>
+          <p className="font-semibold text-[#1E293B]">No proposals found</p>
+          <p className="text-sm text-[#94A3B8] mt-1">
+            {search ? 'Try a different search term' : 'Submit a new proposal to get started'}
+          </p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {visibleProposals.map((proposal) => {
-            const status = statusConfig[proposal.status] ?? statusConfig.PENDING_FACULTY_APPROVAL;
-            const canDelete = session?.user.role === 'ADMIN' || proposal.authorId === session?.user.id;
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          {visible.map((proposal) => {
+            const catColor = categoryColors[proposal.category] ?? { bg: '#F8F9FC', text: '#64748B' };
+            const canDelete = isAdmin || proposal.authorId === session?.user?.id;
 
             return (
-              <div key={proposal.id} className="group flex flex-col overflow-hidden rounded-2xl border border-white/5 bg-slate-900/50 transition-all duration-200 hover:border-white/10 hover:bg-slate-900/80">
-                <div className="flex-1 p-5">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${categoryColors[proposal.category] ?? 'bg-slate-500/20 text-slate-400'}`}>
+              <div key={proposal.id} className="event-card">
+                {/* Thumb */}
+                <div className="event-card-thumb" style={{ background: `linear-gradient(135deg, ${catColor.bg} 0%, #F8F9FC 100%)` }}>
+                  <div className="flex flex-col items-center gap-2 text-center px-4">
+                    <div className="h-12 w-12 rounded-2xl flex items-center justify-center" style={{ background: catColor.bg, border: `1.5px solid ${catColor.text}20` }}>
+                      <FileText className="h-6 w-6" style={{ color: catColor.text }} />
+                    </div>
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: catColor.bg, color: catColor.text }}>
                       {proposal.category}
                     </span>
-                    <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${status.className}`}>
-                      {status.label}
-                    </span>
-                  </div>
-                  <h3 className="font-semibold text-slate-100 line-clamp-1">{proposal.title}</h3>
-                  <p className="mt-1.5 text-sm text-slate-500 line-clamp-2">{proposal.description}</p>
-                  <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-500">
-                    <div className="flex items-center gap-1.5">
-                      <Users className="h-3.5 w-3.5" />
-                      {proposal.expectedAudience} audience
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <DollarSign className="h-3.5 w-3.5" />
-                      ${proposal.budget.toLocaleString()}
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="h-3.5 w-3.5" />
-                      <span className="truncate">{proposal.venue}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5" />
-                      {new Date(proposal.startDate).toLocaleDateString()}
-                    </div>
                   </div>
                 </div>
-                <div className="flex items-center justify-between border-t border-white/5 px-5 py-3">
-                  <Link href={`/proposals/${proposal.id}`} className="text-xs font-medium text-blue-400 transition-all hover:text-blue-300">
+
+                {/* Body */}
+                <div className="p-5 flex-1 flex flex-col">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <h3 className="font-semibold text-[#0F172A] text-[15px] leading-tight line-clamp-1 flex-1">{proposal.title}</h3>
+                    <span className={statusBadge[proposal.status] ?? 'badge badge-pending'}>
+                      {statusLabel[proposal.status] ?? proposal.status}
+                    </span>
+                  </div>
+                  <p className="text-sm text-[#64748B] line-clamp-2 mb-4">{proposal.description}</p>
+
+                  <div className="grid grid-cols-2 gap-2 mt-auto">
+                    {[
+                      { icon: Users,      text: `${proposal.expectedAudience} expected` },
+                      { icon: DollarSign, text: `₹${Number(proposal.budget).toLocaleString()}` },
+                      { icon: MapPin,     text: proposal.venue },
+                      { icon: Calendar,   text: new Date(proposal.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) },
+                    ].map(({ icon: Icon, text }, i) => (
+                      <div key={i} className="flex items-center gap-1.5 text-xs text-[#94A3B8]">
+                        <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span className="truncate">{text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-between border-t border-[#F1F5F9] px-5 py-3">
+                  <Link
+                    href={`/proposals/${proposal.id}`}
+                    className="text-sm font-semibold flex items-center gap-1 hover:underline transition-all"
+                    style={{ color: 'var(--role-accent)' }}
+                  >
                     View details
+                    <TrendingUp className="h-3.5 w-3.5" />
                   </Link>
                   {canDelete && (
                     <button
                       onClick={() => handleDelete(proposal.id)}
                       disabled={deletingId === proposal.id}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-red-400 transition-all hover:bg-red-500/10 disabled:opacity-60"
-                      title="Delete event"
+                      className="h-8 w-8 flex items-center justify-center rounded-xl border border-[#F1F5F9] text-[#94A3B8] hover:bg-red-50 hover:text-red-500 hover:border-red-100 disabled:opacity-50 transition-all"
                     >
-                      {deletingId === proposal.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                      {deletingId === proposal.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                     </button>
                   )}
                 </div>
