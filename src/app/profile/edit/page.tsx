@@ -7,20 +7,6 @@ import { useSession } from '@/lib/auth-client';
 import { UserRecord } from '@/types';
 import { Upload, Loader2, User as UserIcon } from 'lucide-react';
 
-const DEPARTMENTS = [
-  'Computer Science and Engineering',
-  'Artificial Intelligence and Machine Learning',
-  'Artificial Intelligence and Data Science',
-  'Information Technology',
-  'Electronics and Communication Engineering',
-  'Electrical and Electronics Engineering',
-  'Mechanical Engineering',
-  'Civil Engineering',
-  'Cyber Security',
-  'MBA',
-  'MCA',
-];
-
 export default function ProfileEditPage() {
   const router = useRouter();
   const { data: session, loading: sessionLoading, refetch } = useSession();
@@ -32,49 +18,25 @@ export default function ProfileEditPage() {
 
   useEffect(() => {
     if (sessionLoading) return;
-
-    if (!session) {
-      router.push('/login');
-      return;
-    }
-
+    if (!session) { router.push('/login'); return; }
     fetch('/api/profile')
       .then((r) => r.json())
-      .then((data) => {
-        setUser(data.user);
-        setName(data.user.name);
-        setProfileImage(data.user.profileImage ?? '');
-        setLoading(false);
-      })
-      .catch(() => {
-        toast.error('Failed to load profile');
-        setLoading(false);
-      });
+      .then((d) => { setUser(d.user); setName(d.user.name); setProfileImage(d.user.profileImage ?? ''); setLoading(false); })
+      .catch(() => { toast.error('Failed to load profile'); setLoading(false); });
   }, [session, sessionLoading, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-
     const res = await fetch('/api/profile', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name,
-        profileImage: profileImage || null,
-      }),
+      body: JSON.stringify({ name, profileImage: profileImage || null }),
     });
-
     setSaving(false);
-
-    if (!res.ok) {
-      const data = await res.json();
-      toast.error(data.message || 'Failed to update profile');
-      return;
-    }
-
-    const { user: updatedUser } = await res.json();
-    setUser(updatedUser);
+    if (!res.ok) { const d = await res.json(); toast.error(d.message || 'Failed to update'); return; }
+    const { user: updated } = await res.json();
+    setUser(updated);
     refetch();
     toast.success('Profile updated!');
     router.push('/profile');
@@ -83,86 +45,78 @@ export default function ProfileEditPage() {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center p-8">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-          <p className="text-sm text-slate-500">Loading...</p>
-        </div>
+        <Loader2 className="h-7 w-7 animate-spin" style={{ color: 'var(--role-accent)' }} />
       </div>
     );
   }
-
   if (!user) {
     return (
       <div className="flex h-full items-center justify-center p-8">
-        <p className="text-slate-500">Profile not found</p>
+        <p style={{ color: 'var(--text-muted)' }}>Profile not found</p>
       </div>
     );
   }
 
-  const inputCls = 'w-full rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition-all focus:border-white/20 focus:bg-white/8';
-  const labelCls = 'block text-xs font-medium text-slate-400 mb-1.5';
-
   return (
-    <div className="animate-fade-in p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">Edit Profile</h1>
-        <p className="mt-1 text-sm text-slate-500">Update your account information.</p>
+    <div className="page-content animate-fade-up">
+      <div className="page-header">
+        <h1 className="page-title">Edit Profile</h1>
+        <p className="page-subtitle">Update your account information</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
-        <div className="grid gap-6 sm:grid-cols-2">
+      <div className="saas-card p-7 max-w-2xl">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Avatar preview */}
+          <div className="flex items-center gap-5 pb-5 border-b border-[#F1F5F9]">
+            <div
+              className="h-20 w-20 rounded-2xl flex items-center justify-center overflow-hidden flex-shrink-0"
+              style={{ background: 'var(--role-soft)', border: '2px solid var(--role-soft2)' }}
+            >
+              {profileImage ? (
+                <img src={profileImage} alt="Preview" className="h-full w-full object-cover"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              ) : (
+                <UserIcon className="h-9 w-9" style={{ color: 'var(--role-accent)' }} />
+              )}
+            </div>
+            <div>
+              <p className="font-semibold text-[#0F172A]">{user.name}</p>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{user.email}</p>
+              <span className="role-tag mt-1.5 inline-flex">{user.role}</span>
+            </div>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label className="saas-label">Full Name <span className="text-red-400">*</span></label>
+              <input className="saas-input" value={name}
+                onChange={(e) => setName(e.target.value)} required />
+            </div>
+            <div>
+              <label className="saas-label">Email (read-only)</label>
+              <input className="saas-input opacity-60 cursor-not-allowed" value={user.email} disabled />
+            </div>
+          </div>
+
           <div>
-            <label className={labelCls}>Full Name</label>
-            <input
-              className={inputCls}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
+            <label className="saas-label">Profile Image URL</label>
+            <input className="saas-input" placeholder="https://example.com/avatar.jpg"
+              value={profileImage} onChange={(e) => setProfileImage(e.target.value)} />
+            <p className="text-xs mt-1.5" style={{ color: 'var(--text-muted)' }}>
+              Paste a direct image URL or leave blank for the default avatar.
+            </p>
           </div>
-          <div>
-            <label className={labelCls}>Email</label>
-            <input
-              className={`${inputCls} opacity-60`}
-              value={user.email}
-              disabled
-            />
+
+          <div className="flex gap-3 pt-2 border-t border-[#F1F5F9]">
+            <button type="button" onClick={() => router.push('/profile')} className="btn-secondary">
+              Cancel
+            </button>
+            <button type="submit" disabled={saving} className="btn-primary">
+              {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving...</> : 'Save Changes'}
+            </button>
           </div>
-        </div>
-
-        <div>
-          <label className={labelCls}>Profile Image URL</label>
-          <input
-            className={inputCls}
-            placeholder="https://example.com/image.jpg"
-            value={profileImage}
-            onChange={(e) => setProfileImage(e.target.value)}
-          />
-        </div>
-
-        {profileImage && (
-          <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-2xl border border-white/5">
-            <img src={profileImage} alt="Preview" className="h-full w-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-          </div>
-        )}
-
-        <div className="flex gap-3 pt-4">
-          <button
-            type="button"
-            onClick={() => router.push('/profile')}
-            className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-60"
-          >
-            {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving...</> : 'Save Changes'}
-          </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }

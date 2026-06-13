@@ -5,20 +5,10 @@ import { Send, Loader2, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Comment {
-  id: string;
-  content: string;
-  authorName: string;
-  authorRole: string;
-  userId: string;
-  createdAt: string;
-  replies?: Comment[];
+  id: string; content: string; authorName: string;
+  authorRole: string; userId: string; createdAt: string; replies?: Comment[];
 }
-
-interface Props {
-  eventId: string;
-  initialComments: Comment[];
-  currentUserId?: string;
-}
+interface Props { eventId: string; initialComments: Comment[]; currentUserId?: string; }
 
 export function CommentsSection({ eventId, initialComments, currentUserId }: Props) {
   const [comments, setComments] = useState<Comment[]>(initialComments);
@@ -31,8 +21,7 @@ export function CommentsSection({ eventId, initialComments, currentUserId }: Pro
     if (!text.trim()) return;
     setSubmitting(true);
     const res = await fetch(`/api/engagement/events/${eventId}/comments`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: text }),
     });
     setSubmitting(false);
@@ -45,8 +34,7 @@ export function CommentsSection({ eventId, initialComments, currentUserId }: Pro
 
   async function handleEdit(id: string, content: string) {
     const res = await fetch(`/api/engagement/comments/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content }),
     });
     if (!res.ok) { toast.error('Failed to update'); return; }
@@ -71,12 +59,14 @@ export function CommentsSection({ eventId, initialComments, currentUserId }: Pro
             onChange={(e) => setText(e.target.value)}
             placeholder="Write a comment..."
             rows={2}
-            className="flex-1 resize-none rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-white/20"
+            className="saas-textarea flex-1 resize-none"
+            style={{ minHeight: 'unset' }}
           />
           <button
             type="submit"
             disabled={submitting || !text.trim()}
-            className="flex items-center gap-1.5 self-end rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+            className="btn-primary self-end flex-shrink-0"
+            style={{ height: 44, padding: '0 16px' }}
           >
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </button>
@@ -84,39 +74,55 @@ export function CommentsSection({ eventId, initialComments, currentUserId }: Pro
       )}
 
       {comments.length === 0 ? (
-        <p className="py-6 text-center text-sm text-slate-600">No comments yet.</p>
+        <p className="py-8 text-center text-sm" style={{ color: 'var(--text-muted)' }}>No comments yet. Be the first!</p>
       ) : (
         comments.map((c) => (
-          <div key={c.id} className="rounded-xl border border-white/5 bg-white/3 px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-slate-200">{c.authorName}</span>
-                <span className="rounded-full bg-white/5 px-2 py-0.5 text-xs text-slate-500">{c.authorRole}</span>
-                <span className="text-xs text-slate-600">{new Date(c.createdAt).toLocaleDateString()}</span>
+          <div
+            key={c.id}
+            className="rounded-2xl px-4 py-4"
+            style={{ background: 'var(--role-soft)', border: '1px solid var(--card-border)' }}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-semibold" style={{ color: 'var(--text-heading)' }}>{c.authorName}</span>
+                <span
+                  className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                  style={{ background: 'var(--role-soft2)', color: 'var(--role-accent)' }}
+                >
+                  {c.authorRole}
+                </span>
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  {new Date(c.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
               </div>
               {currentUserId === c.userId && (
                 <div className="flex gap-2">
-                  <button onClick={() => setEditing({ id: c.id, content: c.content })} className="text-slate-500 hover:text-blue-400">
+                  <button onClick={() => setEditing({ id: c.id, content: c.content })}
+                    className="p-1.5 rounded-lg hover:bg-white transition-all" style={{ color: 'var(--text-muted)' }}>
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
-                  <button onClick={() => handleDelete(c.id)} className="text-slate-500 hover:text-red-400">
+                  <button onClick={() => handleDelete(c.id)}
+                    className="p-1.5 rounded-lg hover:bg-red-50 hover:text-red-500 transition-all" style={{ color: 'var(--text-muted)' }}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
               )}
             </div>
+
             {editing?.id === c.id ? (
-              <div className="mt-2 flex gap-2">
+              <div className="flex gap-2 mt-2">
                 <input
                   value={editing.content}
                   onChange={(e) => setEditing({ ...editing, content: e.target.value })}
-                  className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white outline-none"
+                  className="saas-input flex-1" style={{ height: 38 }}
                 />
-                <button onClick={() => handleEdit(c.id, editing.content)} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white">Save</button>
-                <button onClick={() => setEditing(null)} className="rounded-lg bg-white/5 px-3 py-1.5 text-xs text-slate-400">Cancel</button>
+                <button onClick={() => handleEdit(c.id, editing.content)}
+                  className="btn-primary" style={{ height: 38, padding: '0 14px', fontSize: 12 }}>Save</button>
+                <button onClick={() => setEditing(null)}
+                  className="btn-secondary" style={{ height: 38, padding: '0 14px', fontSize: 12 }}>Cancel</button>
               </div>
             ) : (
-              <p className="mt-1.5 text-sm text-slate-400">{c.content}</p>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-body)' }}>{c.content}</p>
             )}
           </div>
         ))

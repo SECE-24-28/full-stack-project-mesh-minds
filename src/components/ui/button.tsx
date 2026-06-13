@@ -3,25 +3,23 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60',
+  'inline-flex items-center justify-center rounded-[14px] text-sm font-semibold transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        default: 'bg-slate-900 text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-950',
-        secondary: 'bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100',
-        outline: 'border border-slate-300 bg-transparent hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800',
-        ghost: 'hover:bg-slate-100 dark:hover:bg-slate-800',
+        default:   'bg-[var(--role-accent,#6366F1)] text-white shadow-[0_2px_12px_var(--role-glow,rgba(99,102,241,0.25))] hover:scale-[1.02] hover:opacity-90',
+        secondary: 'bg-white text-[#334155] border border-[#E9ECF5] hover:bg-[var(--role-soft,#EDEDFF)] hover:border-[var(--role-secondary,#B5BAFF)]',
+        outline:   'border border-[#E2E8F0] bg-white text-[#334155] hover:bg-[#F8F9FC]',
+        ghost:     'text-[#334155] hover:bg-[var(--role-soft,#F8F9FC)]',
+        danger:    'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100',
       },
       size: {
-        default: 'h-10 px-4 py-2',
-        sm: 'h-9 px-3',
-        lg: 'h-11 px-8',
+        default: 'h-11 px-5 py-2',
+        sm:      'h-9 px-4 text-xs',
+        lg:      'h-12 px-7 text-base',
       },
     },
-    defaultVariants: {
-      variant: 'default',
-      size: 'default',
-    },
+    defaultVariants: { variant: 'default', size: 'default' },
   },
 );
 

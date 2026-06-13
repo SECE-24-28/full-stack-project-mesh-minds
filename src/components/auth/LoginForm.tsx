@@ -3,23 +3,16 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Loader2 } from 'lucide-react';
 import { Role } from '@/types';
 
-interface LoginFormProps {
-  role: Role;
-  onSwitchToSignup: () => void;
-  verificationToken?: string | null;
-}
+interface Props { role: Role; onSwitchToSignup: () => void; verificationToken?: string | null; }
 
-export function LoginForm({ role, onSwitchToSignup, verificationToken: initialToken }: LoginFormProps) {
+export function LoginForm({ role, onSwitchToSignup, verificationToken: initialToken }: Props) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [needsVerification, setNeedsVerification] = useState(!!initialToken);
-  const [verificationToken, setVerificationToken] = useState<string | null>(initialToken ?? null);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,64 +23,35 @@ export function LoginForm({ role, onSwitchToSignup, verificationToken: initialTo
       body: JSON.stringify({ email, password, role }),
     });
     setLoading(false);
-
-    if (!res.ok) {
-      toast.error('Invalid credentials');
-      return;
-    }
-
-    const data = await res.json();
-
-    if (data.needsVerification) {
-      setNeedsVerification(true);
-      if (data.verificationToken) {
-        setVerificationToken(data.verificationToken);
-      }
-      toast.info('Please check your email for verification link');
-      return;
-    }
-
+    if (!res.ok) { toast.error('Invalid email or password'); return; }
     toast.success('Signed in successfully');
     router.push('/dashboard');
   }
 
-  async function verifyEmail() {
-    if (!verificationToken) return;
-    const res = await fetch(`/api/auth/verify?token=${verificationToken}`);
-    if (res.redirected) {
-      router.push(res.url);
-    } else {
-      const data = await res.json();
-      if (data.message) {
-        toast.success('Email verified!');
-        setNeedsVerification(false);
-      }
-    }
-  }
-
   return (
-    <>
-      {needsVerification && (
-        <div className="rounded-md bg-amber-500/10 p-3 text-center text-sm text-amber-600">
-          <p className="mb-2">Verification required. Check your email for the verification link.</p>
-          <p className="mb-3 font-mono text-xs">Token: {verificationToken}</p>
-          <Button type="button" size="sm" onClick={verifyEmail}>Verify Now</Button>
-        </div>
-      )}
-      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Role Selected: {role.charAt(0) + role.slice(1).toLowerCase()}</p>
-      <form onSubmit={onSubmit} className="space-y-4">
-        <Input placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={needsVerification} />
-        <Input placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={needsVerification} />
-        <Button className="w-full" disabled={loading || needsVerification}>
-          {loading ? 'Signing in...' : needsVerification ? 'Check your email' : 'Sign in'}
-        </Button>
-      </form>
-      <p className="mt-4 text-center text-sm text-slate-600 dark:text-slate-400">
-        Do&apos;t have an account?{' '}
-        <button type="button" onClick={onSwitchToSignup} className="font-medium text-blue-600 hover:underline">
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div>
+        <label className="block text-xs font-semibold text-[#64748B] mb-1.5">Email address</label>
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@university.edu" required
+          className="w-full h-12 rounded-[14px] border border-[#E2E8F0] bg-white px-4 text-sm text-[#0F172A] outline-none placeholder:text-[#94A3B8] transition-all focus:border-[#6366F1] focus:ring-3 focus:ring-[rgba(99,102,241,0.18)]" />
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-[#64748B] mb-1.5">Password</label>
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+          placeholder="••••••••" required
+          className="w-full h-12 rounded-[14px] border border-[#E2E8F0] bg-white px-4 text-sm text-[#0F172A] outline-none placeholder:text-[#94A3B8] transition-all focus:border-[#6366F1] focus:ring-3 focus:ring-[rgba(99,102,241,0.18)]" />
+      </div>
+      <button type="submit" disabled={loading}
+        className="w-full h-12 rounded-[14px] bg-[#6366F1] text-white font-semibold text-sm flex items-center justify-center gap-2 hover:scale-[1.01] hover:opacity-90 transition-all disabled:opacity-60 shadow-[0_4px_16px_rgba(99,102,241,0.28)]">
+        {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Signing in...</> : 'Sign In'}
+      </button>
+      <p className="text-center text-sm text-[#64748B]">
+        Don&apos;t have an account?{' '}
+        <button type="button" onClick={onSwitchToSignup} className="font-semibold text-[#6366F1] hover:underline">
           Create Account
         </button>
       </p>
-    </>
+    </form>
   );
 }

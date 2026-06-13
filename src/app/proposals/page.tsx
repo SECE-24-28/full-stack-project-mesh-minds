@@ -45,6 +45,7 @@ export default function ProposalsPage() {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const isStudent = session?.user?.role === 'STUDENT';
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -103,14 +104,14 @@ export default function ProposalsPage() {
 
       {/* Search */}
       <div className="relative mb-6 max-w-sm">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: isStudent ? '#476070' : '#94A3B8' }} />
         <input
           type="text"
           placeholder="Search proposals..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="saas-input pl-11"
-          style={{ height: '44px' }}
+          style={isStudent ? { height: '44px', background: 'rgba(15,20,35,0.70)', border: '1px solid rgba(118,171,174,0.20)', color: '#FFFFFF' } : { height: '44px' }}
         />
       </div>
 

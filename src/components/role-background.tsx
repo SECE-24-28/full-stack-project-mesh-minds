@@ -13,17 +13,24 @@ export function RoleBackground({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F4F6FA]">
+      <div
+        className="flex min-h-screen items-center justify-center"
+        style={{ background: 'var(--role-bg, #F8F9FC)' }}
+      >
         <div
-          className="h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
-          style={{ borderColor: 'var(--role-primary)', borderTopColor: 'transparent' }}
+          className="h-8 w-8 animate-spin rounded-full border-2"
+          style={{ borderColor: 'var(--role-primary, #9FA1FF)', borderTopColor: 'transparent' }}
         />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--role-bg, #F8F9FC)' }} data-role={role}>
+    <div
+      className="min-h-screen"
+      style={{ background: 'var(--role-bg)' }}
+      data-role={role}
+    >
       {children}
     </div>
   );
