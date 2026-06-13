@@ -50,10 +50,8 @@ function RowItem({ icon: Icon, iconBg, iconColor, title, sub, badge, badgeClass 
 }) {
   return (
     <div
-      className="flex items-center justify-between px-4 py-3 rounded-xl border transition-all"
+      className="flex items-center justify-between px-4 py-3 rounded-xl border transition-all hover:bg-[var(--role-soft)]"
       style={{ borderColor: 'var(--card-border)' }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--role-soft)'; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = ''; }}
     >
       <div className="flex items-center gap-3">
         <div className="h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: iconBg }}>

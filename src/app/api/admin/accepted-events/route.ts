@@ -14,8 +14,12 @@ export async function GET() {
       select: {
         id: true, title: true, description: true, category: true,
         expectedAudience: true, budget: true, venue: true,
-        startDate: true, endDate: true, authorId: true,
+        startDate: true, endDate: true,
         author: { select: { name: true, department: true } },
+        _count: { select: { registrations: true } },
+        fundingContributions: {
+          select: { id: true, amount: true, contributorId: true, contributor: { select: { name: true } } },
+        },
       },
     }),
     prisma.calendarEvent.findMany({
@@ -32,7 +36,11 @@ export async function GET() {
       expectedAudience: e.expectedAudience, budget: e.budget, venue: e.venue,
       startDate: e.startDate.toISOString(), endDate: e.endDate.toISOString(),
       authorName: e.author.name, authorDepartment: e.author.department,
+      registrations: e._count.registrations,
       reminded: remindedSet.has(e.id),
+      funding: e.fundingContributions.map((f) => ({
+        id: f.id, amount: f.amount, contributor: f.contributor.name,
+      })),
     })),
   });
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { NotificationService } from '@/lib/engagement/notification.service';
+import { PointsService } from '@/lib/engagement/points.service';
 
 export async function PATCH(
   request: Request,
@@ -50,10 +51,14 @@ export async function PATCH(
       });
     }
 
+    // Award 25 points to proposer for full approval (faculty + admin)
+    await PointsService.awardAcceptancePoints(event.authorId);
+    await prisma.user.update({ where: { id: event.authorId }, data: { points: { increment: 25 } } });
+
     await NotificationService.send(
       event.authorId,
       'Admin Approved Your Proposal',
-      `Admin approved "${event.title}" — it's now live!`,
+      `Admin approved "${event.title}" — it's now live! You earned 25 points!`,
       event.id
     );
     if (event.mentorFacultyId) {

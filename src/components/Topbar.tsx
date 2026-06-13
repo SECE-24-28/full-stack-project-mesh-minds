@@ -60,7 +60,7 @@ export function Topbar() {
 
       {/* Calendar shortcut */}
       <button
-        onClick={() => router.push('/calendar')}
+        onClick={() => router.push(session?.user.role === 'ADMIN' ? '/admin/calendar' : '/calendar')}
         title="Calendar"
         className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--border)] bg-white text-[#64748B] transition-all hover:bg-[var(--role-soft)] hover:text-[var(--role-accent)]"
       >

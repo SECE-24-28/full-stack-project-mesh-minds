@@ -50,9 +50,9 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       registrationCount: event._count.registrations,
       hasVoted: event.votes.length > 0,
       isRegistered: event.registrations.length > 0,
-      hasAppliedVolunteer: event.volunteerApplications.length > 0,
       createdAt: event.createdAt.toISOString(),
     },
+    hasAppliedVolunteer: event.volunteerApplications.length > 0,
     comments: event.comments.map((c) => ({
       id: c.id,
       content: c.content,

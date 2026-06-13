@@ -53,7 +53,7 @@ function AuthContent() {
             </p>
             <p className="text-center text-sm text-[#64748B]">
               Already have an account?{' '}
-              <button onClick={() => setMode('login')} className="font-semibold text-[#6366F1] hover:underline">
+              <button onClick={() => router.push('/login')} className="font-semibold text-[#6366F1] hover:underline">
                 Sign In
               </button>
             </p>

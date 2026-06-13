@@ -2,11 +2,11 @@ import { prisma } from '@/lib/prisma';
 
 export const POINTS = {
   PROPOSAL: 5,
-  ACCEPTED: 20,
+  ACCEPTED: 25,
   COMPLETED: 30,
   VOLUNTEER: 10,
   MENTOR: 15,
-  VOTES_PER_POINT: 10, // every 10 votes = 1 point
+  VOTES_PER_POINT: 10,
 } as const;
 
 async function award(userId: string, points: number, reason: string) {

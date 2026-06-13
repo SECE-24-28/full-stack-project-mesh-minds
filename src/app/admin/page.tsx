@@ -107,12 +107,13 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <div className="saas-card p-6 mb-6">
+      <div className="saas-card p-6">
         <p className="section-title mb-4">Quick Actions</p>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
           {[
-            { label: 'Review Pending Events', icon: Clock,  href: '/admin/pending-events', color: '#F59E0B' },
-            { label: 'Manage Users',          icon: Users,  href: '/admin/users',          color: '#9FA1FF' },
+            { label: 'Review Pending Events', icon: Clock,     href: '/admin/pending-events',   color: '#F59E0B' },
+            { label: 'Upcoming Events',       icon: Calendar,  href: '/admin/upcoming-events',  color: '#4DC96A' },
+            { label: 'Manage Users',          icon: Users,     href: '/admin/users',            color: '#9FA1FF' },
           ].map((action) => (
             <button
               key={action.href}
@@ -129,40 +130,6 @@ export default function AdminDashboardPage() {
             </button>
           ))}
         </div>
-      </div>
-
-      {/* Accepted Events */}
-      <div className="saas-table-wrap">
-        <div className="px-6 py-5 border-b border-[#E9ECF5]">
-          <p className="section-title">Accepted Events</p>
-          <p className="section-subtitle">Currently active campus events</p>
-        </div>
-        {stats.acceptedEventList?.length ? (
-          <table className="saas-table">
-            <thead>
-              <tr>
-                <th>Event</th>
-                <th>Author</th>
-                <th>Date</th>
-                <th>Registrations</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stats.acceptedEventList.map((event) => (
-                <tr key={event.id}>
-                  <td className="font-medium text-[#1E293B]">{event.title}</td>
-                  <td className="text-[#64748B]">{event.authorName}</td>
-                  <td className="text-[#94A3B8]">{new Date(event.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
-                  <td>
-                    <span className="badge badge-accepted">{event.registrations} registered</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <p className="py-10 text-center text-sm text-[#94A3B8]">No accepted events yet.</p>
-        )}
       </div>
     </div>
   );

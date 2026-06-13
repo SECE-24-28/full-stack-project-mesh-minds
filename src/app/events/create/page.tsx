@@ -57,6 +57,8 @@ export default function CreateEventPage() {
     if (isNaN(start.getTime()) || isNaN(end.getTime())) { toast.error('Invalid date/time'); return; }
     if (start <= now) { toast.error('Start date must be in the future'); return; }
     if (end <= start) { toast.error('End must be after start'); return; }
+    const durationMinutes = (end.getTime() - start.getTime()) / 60000;
+    if (durationMinutes < 30) { toast.error('Event duration must be at least 30 minutes'); return; }
     if (session?.user.role === 'STUDENT' && !form.mentorFacultyId) { toast.error('Please select a faculty mentor'); return; }
 
     setSubmitting(true);

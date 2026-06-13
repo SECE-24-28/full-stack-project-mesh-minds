@@ -12,15 +12,21 @@ export async function GET() {
     return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
   }
 
+  // Return all events assigned to this faculty mentor:
+  // - PENDING_FACULTY_APPROVAL: awaiting their review
+  // - ACCEPTED: approved but still ongoing (stays until faculty rates after completion)
   const events = await prisma.eventProposal.findMany({
     where: {
       mentorFacultyId: session.user.id,
-      status: 'PENDING_FACULTY_APPROVAL',
+      status: { in: ['PENDING_FACULTY_APPROVAL', 'ACCEPTED'] },
     },
     orderBy: { createdAt: 'desc' },
     include: {
       author: { select: { name: true, department: true, rollNumber: true } },
       _count: { select: { votes: true } },
+      fundingContributions: {
+        select: { id: true, amount: true, contributor: { select: { name: true } } },
+      },
     },
   });
 
@@ -31,6 +37,9 @@ export async function GET() {
     voteCount: e._count.votes,
     startDate: e.startDate.toISOString(),
     endDate: e.endDate.toISOString(),
+    funding: e.fundingContributions.map((f) => ({
+      id: f.id, amount: f.amount, contributor: f.contributor.name,
+    })),
   }));
 
   return NextResponse.json({ events: formatted });

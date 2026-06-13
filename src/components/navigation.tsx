@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  LayoutDashboard, FileText, BarChart3, LogOut, Zap,
+  LayoutDashboard, FileText, LogOut, Zap,
   Users, Shield, GraduationCap, BookOpen, Star, User,
   CalendarDays, Clock, ChevronRight, Settings, Calendar,
-  Bell, Ticket,
+  Bell, Ticket, BarChart3,
 } from 'lucide-react';
 import { useSession, signOut } from '@/lib/auth-client';
 import { cn } from '@/lib/utils';
@@ -17,7 +17,6 @@ const navByRole = {
     { href: '/upcoming-events', label: 'Events',       icon: CalendarDays },
     { href: '/proposals',       label: 'My Proposals', icon: FileText },
     { href: '/calendar',        label: 'Calendar',     icon: Calendar },
-    { href: '/analytics',       label: 'Analytics',    icon: BarChart3 },
     { href: '/engagement/analytics/student', label: 'My Stats', icon: Star },
     { href: '/profile',         label: 'Profile',      icon: User },
   ],
@@ -27,16 +26,17 @@ const navByRole = {
     { href: '/upcoming-events', label: 'Events',       icon: CalendarDays },
     { href: '/faculty/pending-events', label: 'Review Events', icon: Clock },
     { href: '/calendar',        label: 'Calendar',     icon: Calendar },
-    { href: '/analytics',       label: 'Analytics',    icon: BarChart3 },
     { href: '/engagement/analytics/faculty', label: 'My Stats', icon: Star },
     { href: '/profile',         label: 'Profile',      icon: User },
   ],
   ADMIN: [
-    { href: '/admin',           label: 'Dashboard',    icon: LayoutDashboard },
-    { href: '/admin/pending-events', label: 'Pending Events', icon: Clock },
-    { href: '/analytics',       label: 'Analytics',    icon: BarChart3 },
-    { href: '/admin/users',     label: 'Users',        icon: Users },
-    { href: '/profile',         label: 'Profile',      icon: User },
+    { href: '/admin',                    label: 'Dashboard',       icon: LayoutDashboard },
+    { href: '/admin/pending-events',     label: 'Pending Events',  icon: Clock },
+    { href: '/admin/upcoming-events',    label: 'Upcoming Events', icon: CalendarDays },
+    { href: '/admin/completed-events',   label: 'Completed Events',icon: Star },
+    { href: '/admin/analytics',          label: 'Analytics',       icon: BarChart3 },
+    { href: '/admin/users',             label: 'Users',           icon: Users },
+    { href: '/profile',                 label: 'Profile',         icon: User },
   ],
 };
 

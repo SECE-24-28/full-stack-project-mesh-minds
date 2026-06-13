@@ -2,10 +2,9 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { PointsService } from '@/lib/engagement/points.service';
-import { FileText, ThumbsUp, Star, Users, Zap } from 'lucide-react';
-import { EngagementBarChart, EngagementPieChart } from '@/components/engagement/EngagementCharts';
+import { FileText, ThumbsUp, Users, Zap, TrendingUp, Award, Calendar } from 'lucide-react';
 
-export default async function StudentAnalyticsPage() {
+export default async function StudentMyStatsPage() {
   const session = await auth();
   if (!session?.user) redirect('/login');
 
@@ -23,109 +22,126 @@ export default async function StudentAnalyticsPage() {
     PointsService.getUserHistory(userId),
   ]);
 
-  const accepted = proposals.filter((p) => ['ACCEPTED', 'COMPLETED'].includes(p.status)).length;
-  const rejected = proposals.filter((p) => p.status === 'REJECTED').length;
+  const accepted  = proposals.filter((p) => ['ACCEPTED', 'COMPLETED'].includes(p.status)).length;
+  const pending   = proposals.filter((p) => p.status.startsWith('PENDING')).length;
+  const rejected  = proposals.filter((p) => p.status === 'REJECTED').length;
+  const completed = proposals.filter((p) => p.status === 'COMPLETED').length;
   const votesReceived = proposals.reduce((s, p) => s + p._count.votes, 0);
 
-  const statusCounts: Record<string, number> = {};
-  for (const p of proposals) {
-    statusCounts[p.status] = (statusCounts[p.status] ?? 0) + 1;
-  }
-  const statusPieData = Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
-
-  const recentActivity = activityHistory.slice(0, 10).map((h) => ({
-    reason: h.reason.length > 25 ? h.reason.slice(0, 25) + '…' : h.reason,
-    points: h.points,
-  }));
-
-  const kpis = [
-    { label: 'Proposals', value: proposals.length, icon: FileText, color: 'from-blue-500 to-cyan-500' },
-    { label: 'Accepted', value: accepted, icon: Star, color: 'from-emerald-500 to-teal-500' },
-    { label: 'Votes Received', value: votesReceived, icon: ThumbsUp, color: 'from-pink-500 to-rose-500' },
-    { label: 'Volunteer Roles', value: volunteerApps, icon: Users, color: 'from-violet-500 to-indigo-500' },
-    { label: 'Registered Events', value: bookings, icon: Star, color: 'from-amber-500 to-orange-500' },
-    { label: 'Total Points', value: totalPoints, icon: Zap, color: 'from-cyan-500 to-blue-500' },
-  ];
+  const statusConfig: Record<string, { label: string; cls: string }> = {
+    ACCEPTED:                 { label: 'Accepted',      cls: 'bg-emerald-100 text-emerald-700' },
+    COMPLETED:                { label: 'Completed',     cls: 'bg-blue-100 text-blue-700' },
+    REJECTED:                 { label: 'Rejected',      cls: 'bg-red-100 text-red-700' },
+    PENDING_FACULTY_APPROVAL: { label: 'Faculty Review',cls: 'bg-amber-100 text-amber-700' },
+    PENDING_ADMIN_APPROVAL:   { label: 'Admin Review',  cls: 'bg-purple-100 text-purple-700' },
+  };
 
   return (
-    <div className="animate-fade-in p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">My Analytics</h1>
-        <p className="mt-1 text-sm text-slate-500">Your engagement stats on CampusConnect</p>
+    <div className="page-content animate-fade-up">
+      <div className="page-header">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="h-9 w-9 rounded-xl flex items-center justify-center" style={{ background: 'var(--role-soft)' }}>
+            <TrendingUp className="h-5 w-5" style={{ color: 'var(--role-accent)' }} />
+          </div>
+          <div>
+            <h1 className="page-title">My Stats</h1>
+            <p className="page-subtitle">Your engagement and activity overview</p>
+          </div>
+        </div>
       </div>
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {kpis.map((k) => (
-          <div key={k.label} className="role-stat-card rounded-2xl p-5">
-            <div className="flex items-start justify-between">
+      {/* KPI Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 mb-6">
+        {[
+          { label: 'Total Points',      value: totalPoints,      gradient: 'from-violet-500 to-indigo-500', icon: <Zap className="h-6 w-6 text-white" /> },
+          { label: 'Proposals',         value: proposals.length, gradient: 'from-blue-500 to-cyan-500',     icon: <FileText className="h-6 w-6 text-white" /> },
+          { label: 'Accepted',          value: accepted,         gradient: 'from-emerald-500 to-teal-500',  icon: <Award className="h-6 w-6 text-white" /> },
+          { label: 'Votes Received',    value: votesReceived,    gradient: 'from-pink-500 to-rose-500',     icon: <ThumbsUp className="h-6 w-6 text-white" /> },
+          { label: 'Volunteer Roles',   value: volunteerApps,    gradient: 'from-amber-500 to-orange-500',  icon: <Users className="h-6 w-6 text-white" /> },
+          { label: 'Events Registered', value: bookings,         gradient: 'from-sky-500 to-blue-500',      icon: <Calendar className="h-6 w-6 text-white" /> },
+        ].map((k) => (
+          <div key={k.label} className="saas-card p-5">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-500">{k.label}</p>
-                <p className="mt-2 text-3xl font-bold text-white">{k.value}</p>
+                <p className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider mb-1">{k.label}</p>
+                <p className="text-3xl font-bold text-[#0F172A]">{k.value}</p>
               </div>
-              <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${k.color}`}>
-                <k.icon className="h-5 w-5 text-white" />
+              <div className={`h-12 w-12 rounded-2xl flex items-center justify-center bg-gradient-to-br ${k.gradient} flex-shrink-0`}>
+                {k.icon}
               </div>
             </div>
           </div>
         ))}
       </div>
 
+      {/* Proposal Breakdown */}
+      {proposals.length > 0 && (
+        <div className="saas-card p-5 mb-6">
+          <p className="text-sm font-semibold text-[#0F172A] mb-3">Proposal Breakdown</p>
+          <div className="grid grid-cols-4 gap-3 text-center">
+            {[
+              { label: 'Accepted',  count: accepted,  cls: 'bg-emerald-50 text-emerald-700 border border-emerald-200' },
+              { label: 'Completed', count: completed, cls: 'bg-blue-50 text-blue-700 border border-blue-200' },
+              { label: 'Pending',   count: pending,   cls: 'bg-amber-50 text-amber-700 border border-amber-200' },
+              { label: 'Rejected',  count: rejected,  cls: 'bg-red-50 text-red-700 border border-red-200' },
+            ].map((s) => (
+              <div key={s.label} className={`rounded-xl p-3 ${s.cls}`}>
+                <p className="text-2xl font-bold">{s.count}</p>
+                <p className="text-xs font-medium mt-0.5">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="role-card rounded-2xl p-6">
-          <p className="mb-4 font-semibold text-white">Proposal Status Breakdown</p>
-          <EngagementPieChart data={statusPieData} />
+        {/* My Proposals */}
+        <div className="saas-card p-5">
+          <p className="text-sm font-semibold text-[#0F172A] mb-4">My Proposals ({proposals.length})</p>
+          {proposals.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <FileText className="h-8 w-8 text-[#CBD5E1] mb-2" />
+              <p className="text-sm text-[#94A3B8]">No proposals yet</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {proposals.slice(0, 8).map((p) => {
+                const sc = statusConfig[p.status] ?? { label: p.status, cls: 'bg-gray-100 text-gray-600' };
+                return (
+                  <div key={p.id} className="flex items-center justify-between rounded-xl border border-[#F1F5F9] bg-[#F8F9FC] px-4 py-3 gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-[#0F172A] truncate">{p.title}</p>
+                      <p className="text-xs text-[#94A3B8] mt-0.5">{p._count.votes} votes · {new Date(p.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <span className={`flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${sc.cls}`}>{sc.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        <div className="role-card rounded-2xl p-6">
-          <p className="mb-4 font-semibold text-white">Recent Point Activity</p>
-          <EngagementBarChart
-            data={recentActivity}
-            dataKey="points"
-            nameKey="reason"
-            color="#3B82F6"
-            label="Points"
-          />
-        </div>
-      </div>
-
-      <div className="role-card mt-6 rounded-2xl p-6">
-        <p className="mb-4 font-semibold text-white">My Proposals ({proposals.length})</p>
-        {proposals.length === 0 ? (
-          <p className="text-center text-sm text-slate-600">No proposals yet.</p>
-        ) : (
-          <div className="space-y-2">
-            {proposals.slice(0, 8).map((p) => (
-              <div key={p.id} className="flex items-center justify-between rounded-xl border border-white/5 bg-white/3 px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium text-slate-200">{p.title}</p>
-                  <p className="text-xs text-slate-500">{p._count.votes} votes · {new Date(p.createdAt).toLocaleDateString()}</p>
+        {/* Points History */}
+        <div className="saas-card p-5">
+          <p className="text-sm font-semibold text-[#0F172A] mb-4">Points History</p>
+          {activityHistory.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <Zap className="h-8 w-8 text-[#CBD5E1] mb-2" />
+              <p className="text-sm text-[#94A3B8]">No points activity yet</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {activityHistory.slice(0, 10).map((h) => (
+                <div key={h.id} className="flex items-center justify-between rounded-xl border border-[#F1F5F9] bg-[#F8F9FC] px-4 py-3">
+                  <p className="text-sm text-[#475569] truncate flex-1 mr-3">{h.reason}</p>
+                  <span className={`flex-shrink-0 text-sm font-bold ${h.points > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {h.points > 0 ? '+' : ''}{h.points}
+                  </span>
                 </div>
-                <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                  p.status === 'ACCEPTED' || p.status === 'COMPLETED' ? 'bg-emerald-500/20 text-emerald-400' :
-                  p.status === 'REJECTED' ? 'bg-red-500/20 text-red-400' : 'bg-slate-500/20 text-slate-400'
-                }`}>{p.status}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="role-card mt-6 rounded-2xl p-6">
-        <p className="mb-4 font-semibold text-white">Points History</p>
-        {activityHistory.length === 0 ? (
-          <p className="text-center text-sm text-slate-600">No points yet.</p>
-        ) : (
-          <div className="space-y-2">
-            {activityHistory.slice(0, 10).map((h) => (
-              <div key={h.id} className="flex items-center justify-between rounded-xl border border-white/5 bg-white/3 px-4 py-3">
-                <p className="text-sm text-slate-300">{h.reason}</p>
-                <span className={`text-sm font-bold ${h.points > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {h.points > 0 ? '+' : ''}{h.points}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
